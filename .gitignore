@@ -150,7 +150,7 @@ pytestdebug.log
 
 # GraphQL #
 ###########
-docker-compose.yml
+# docker-compose.yml
 
 # gitignore #
 #############

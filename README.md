@@ -24,6 +24,7 @@
     - [Migrations](#migrations)
       - [Makemigrations](#makemigrations)
       - [Migrate](#migrate)
+    - [Admin Panel](#admin-panel)
   - [Tests](#tests)
 
 # FOLDER AND FILES
@@ -488,6 +489,67 @@
   ```Bash
     docker-compose run app sh -c "python manager.py migrate"
   ```
+
+### Admin Panel
+
+[Go Back to Contents](#contents)
+
+- in `app/core/admin.py`
+
+  ```Python
+    from django.contrib import admin
+    # Import the default user admin (UserAdmin)
+    from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+    from core import models
+
+    # Create our custom UserAmin and extend from BaseUserAdmin
+    # So we can define custom fields on our admin panel
+    class UserAdmin(BaseUserAdmin):
+        ordering = ['id']
+        # The fields to be used in displaying the User model.
+        list_display = ['email', 'name']
+        fieldsets = (
+            (None, {'fields': ('email', 'password')}),
+            (_('Personal Info'), {'fields': ('name',)}),
+            (_('Permissions'), {
+             'fields': ('is_active', 'is_staff', 'is_superuser')}),
+            (_('Important dates'), {'fields': ('last_login',)})
+
+        )
+        add_fieldsets = (
+            (None, {'classes': ('wide',),
+                    'fields': ('email', 'password1', 'password2')}),
+        )
+
+    # Register the User table with our custom UserAdmin
+    admin.site.register(models.User, UserAdmin)
+  ```
+
+  - **fieldsets**
+
+    - You can add "sections" to group related information using **fieldsets**
+    - For example:
+
+      ```Python
+        class BookInstanceAdmin(admin.ModelAdmin):
+        list_filter = ('status', 'due_back')
+
+        fieldsets = (
+            (None, {
+                'fields': ('book', 'imprint', 'id')
+            }),
+            ('Availability', {
+                'fields': ('status', 'due_back')
+            }),
+        )
+      ```
+
+      - The first argument is the **title**, if you don't want to display the title just pass `None` to omit the tittle.
+        ![](https://mdn.mozillademos.org/files/14029/admin_improved_bookinstance_detail_sections.png)
+
+  - **add_fieldsets**
+    - The `add_fieldsets` class variable is used to define the fields that will be displayed on the create user page.
+    - In our case this will allow us to create `email`, `password1`, and `password2`
 
 ## Tests
 
