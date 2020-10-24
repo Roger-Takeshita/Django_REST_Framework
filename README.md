@@ -7,6 +7,10 @@
   - [Build Docker Image](#build-docker-image)
   - [Docker Compose](#docker-compose)
     - [Docker Compose Build](#docker-compose-build)
+  - [Run Commands](#run-commands)
+- [TRAVIS CI](#travis-ci)
+  - [Config File](#config-file)
+- [FLAKE8](#flake8)
 - [DJANGO REST_FRAMEWORK](#django-rest_framework)
 
 # FOLDER AND FILES
@@ -153,7 +157,7 @@
         # volume allows us to get the updates from our project into the docker image
         # it will map our ./app directory in our project into /app directory in our docker image
         volumes:
-          - ./app /app
+          - ./app:/app
         # the commando to run our application in our docker image container
         command: >
           sh -c "python manage.py runserver 0.0.0.0:8000"
@@ -171,7 +175,7 @@
         ports:
           - "8000:8000"
         volumes:
-          - ./app /app
+          - ./app:/app
         command:
           sh -c "python manage.py runserver 0.0.0.0:8000"
   ```
@@ -184,6 +188,57 @@
 
   ```Bash
     docker-compose build
+  ```
+
+## Run Commands
+
+[Go Back to Contents](#contents)
+
+- To run the commands using docker
+
+  ```Bash
+    docker-compose run app sh -c "django-admin.py startproject config ."
+
+    # docker-compose run                      = docker command to run command
+    # app                                     = the name of our service
+    # sh -c                                   = shell command
+    # "django-admin.py startproject config ." = the command
+  ```
+
+  - Because we defined the `WORKDIR` in our docker compose and changed the dir into that folder
+  - Docker will create our project inside the `WORKDIR`
+
+# TRAVIS CI
+
+[Go Back to Contents](#contents)
+
+- [Travis CI Website](https://travis-ci.org/)
+- Travis CI is a hosted continuous integration service used to build and test software projects hosted at GitHub and Bitbucket. Travis CI provides various paid plans for private projects, and a free plan for open source.
+
+## Config File
+
+[Go Back to Contents](#contents)
+
+- Create `.travis.yml` on the root of the project
+
+  ```Bash
+    touch .travis.yml app/.flake8
+  ```
+
+# FLAKE8
+
+[Go Back to Contents](#contents)
+
+- Flake8. Which is “the wrapper which verifies pep8, pyflakes and circular complexity
+- in `app/.flake8`
+
+  ```Bash
+    [flake8]
+    exclude =
+      migrations,
+      __pycache__,
+      manage.py,
+      settings.py
   ```
 
 # DJANGO REST_FRAMEWORK
