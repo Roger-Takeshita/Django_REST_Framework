@@ -7,11 +7,24 @@
   - [Build Docker Image](#build-docker-image)
   - [Docker Compose](#docker-compose)
     - [Docker Compose Build](#docker-compose-build)
-  - [Run Commands](#run-commands)
-- [TRAVIS CI](#travis-ci)
-  - [Config File](#config-file)
-- [FLAKE8](#flake8)
 - [DJANGO REST_FRAMEWORK](#django-rest_framework)
+  - [Enable Travis CI and Flake8](#enable-travis-ci-and-flake8)
+    - [Travis CI](#travis-ci)
+      - [Config .travis.yml](#config-travisyml)
+    - [Flake8](#flake8)
+      - [Config Flake8](#config-flake8)
+  - [Start New Project Using Docker](#start-new-project-using-docker)
+    - [Create a New App Using Docker](#create-a-new-app-using-docker)
+    - [Create Folder and Files](#create-folder-and-files)
+    - [Model](#model)
+      - [BaseUserManager](#baseusermanager)
+      - [AbstractBaseUser](#abstractbaseuser)
+      - [PermissionsMixin](#permissionsmixin)
+    - [Config Auth Settings](#config-auth-settings)
+    - [Migrations](#migrations)
+      - [Makemigrations](#makemigrations)
+      - [Migrate](#migrate)
+  - [Tests](#tests)
 
 # FOLDER AND FILES
 
@@ -190,11 +203,59 @@
     docker-compose build
   ```
 
-## Run Commands
+# DJANGO REST_FRAMEWORK
 
 [Go Back to Contents](#contents)
 
-- To run the commands using docker
+## Enable Travis CI and Flake8
+
+### Travis CI
+
+[Go Back to Contents](#contents)
+
+- [Travis CI Website](https://travis-ci.org/)
+- [Travis CI Tutorial](https://docs.travis-ci.com/user/tutorial/)
+- Travis CI is a hosted continuous integration service used to build and test software projects hosted at GitHub and Bitbucket. Travis CI provides various paid plans for private projects, and a free plan for open source.
+
+#### Config .travis.yml
+
+[Go Back to Contents](#contents)
+
+- Create `.travis.yml` on the root of the project
+
+  ```Bash
+    touch .travis.yml app/.flake8
+  ```
+
+### Flake8
+
+[Go Back to Contents](#contents)
+
+- Flake8. Which is:
+  > the wrapper which verifies pep8, pyflakes and circular complexity
+
+#### Config Flake8
+
+[Go Back to Contents](#contents)
+
+- in `app/.flake8`
+
+  - we are going to exclude some files
+
+    ```Bash
+      [flake8]
+      exclude =
+        migrations,
+        __pycache__,
+        manage.py,
+        settings.py
+    ```
+
+## Start New Project Using Docker
+
+[Go Back to Contents](#contents)
+
+- Run the following command to start a new project in docker
 
   ```Bash
     docker-compose run app sh -c "django-admin.py startproject config ."
@@ -208,39 +269,239 @@
   - Because we defined the `WORKDIR` in our docker compose and changed the dir into that folder
   - Docker will create our project inside the `WORKDIR`
 
-# TRAVIS CI
+### Create a New App Using Docker
 
 [Go Back to Contents](#contents)
 
-- [Travis CI Website](https://travis-ci.org/)
-- Travis CI is a hosted continuous integration service used to build and test software projects hosted at GitHub and Bitbucket. Travis CI provides various paid plans for private projects, and a free plan for open source.
-
-## Config File
-
-[Go Back to Contents](#contents)
-
-- Create `.travis.yml` on the root of the project
+- Run the following command to start a new app in docker
 
   ```Bash
-    touch .travis.yml app/.flake8
+    docker-compose run app sh -c "python manager.py startapp core"
+
+    # docker-compose run                = docker command to run command
+    # app                               = the name of our service
+    # sh -c                             = shell command
+    # "python manager.py startapp core" = the command
   ```
 
-# FLAKE8
+  - Because we defined the `WORKDIR` in our docker compose and changed the dir into that folder
+  - Docker will create our app inside the `WORKDIR`
 
-[Go Back to Contents](#contents)
-
-- Flake8. Which is “the wrapper which verifies pep8, pyflakes and circular complexity
-- in `app/.flake8`
+- Delete `app/core/tests.py` and `app/core/views.py`, since we are not going to be using
 
   ```Bash
-    [flake8]
-    exclude =
-      migrations,
-      __pycache__,
-      manage.py,
-      settings.py
+    .
+    ├── app
+    │   ├── __pycache__
+    │   ├── config
+    │   │   ├── __pycache__
+    │   │   ├── __init__.py
+    │   │   ├── asgi.py
+    │   │   ├── settings.py
+    │   │   ├── urls.py
+    │   │   └── wsgi.py
+    │   ├── core
+    │   │   ├── __pycache__
+    │   │   ├── migrations
+    │   │   │   ├── __pycache__
+    │   │   │   └── __init__.py
+    │   │   ├── __init__.py
+    │   │   ├── admin.py
+    │   │   ├── apps.py
+    │   │   ├── tests.py            <--- Delete
+    │   │   └── views.py            <--- Delete
+    │   ├── .flake8
+    │   ├── db.sqlite3
+    │   └── manage.py
+    ├── .gitignore
+    ├── .travis.yml
+    ├── docker-compose.yml
+    ├── Dockerfile
+    ├── README.md
+    └── requirements.txt
   ```
 
-# DJANGO REST_FRAMEWORK
+### Create Folder and Files
 
 [Go Back to Contents](#contents)
+
+- Create the following files using my custom [touch](https://github.com/Roger-Takeshita/Shell-Script/blob/master/touch-open.sh) command
+
+  ```Bash
+    touch app/core/tests/__init__.py + test_models.py
+  ```
+
+### Model
+
+[Go Back to Contents](#contents)
+
+- In `app/core/models.py`
+
+  - We are going to create our user model
+
+    ```Python
+      from django.db import models
+      from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+
+      # The UserManager class provide us a helper function to create a user or create a super user
+      # We inherit the BaseUserManager, all the features tha comes with the base user manager, but we are going to override some functions to handle our email address instead of the username (default)
+      class UserManager(BaseUserManager):
+          def create_user(self, email, password=None, **extra_fields):
+              # **extra_fields, just like in JS, all the rest of the fields will be passed to extra_fields
+              """
+              Creates and save a new user
+              """
+              # Create a new user using - self.model() shorthand
+              user = self.model(email=email, **extra_fields)
+              # use the set_password helper function that comes with AbstractBaseUser to hash the password
+              user.set_password(password)
+              # using=self._db is only required when we are using multiple databases. But it's a good practice to add it anyway
+              user.save(using=self._db)
+              return user
+
+      # Create our user model and we are going to extend from AbstractBaseUser, PermissionsMixin
+      class User(AbstractBaseUser, PermissionsMixin):
+          """
+          Custom user model that suppors using email instead username
+          """
+          email = models.EmailField(max_length=255, unique=True)
+          name = models.CharField(max_length=255)
+          is_active = models.BooleanField(default=True)
+          is_staff = models.BooleanField(default=False)
+
+          # Then we assign the objects to the UserManager()
+          objects = UserManager()
+
+          # then we change the default username to email
+          USERNAME_FIELD = 'email'
+    ```
+
+#### BaseUserManager
+
+[Go Back to Contents](#contents)
+
+- **[BaseUserManager](https://docs.djangoproject.com/en/3.1/topics/auth/customizing/#django.contrib.auth.models.BaseUserManager)** You should also define a custom manager for your user model. If your user model defines `username`, `email`, `is_staff`, `is_active`, `is_superuser`, `last_login`, and `date_joined` fields the same as Django’s default user, you can install Django’s UserManager; however, if your user model defines different fields, you’ll need to define a custom manager that extends `BaseUserManager` providing two additional methods:
+
+  - **create_user(username_field, password=None, \*\*other_fields)**
+
+    - The prototype of `create_user()` should accept the username field, plus all required fields as arguments. For example, if your user model uses `email` as the username field, and has `date_of_birth` as a required field, then `create_user` should be defined as:
+
+      ```Python
+        def create_user(self, email, date_of_birth, password=None):
+        # create user here
+        ...
+      ```
+
+  - **create_superuser(username_field, password=None, \*\*other_fields)**
+
+    - The prototype of `create_superuser()` should accept the username field, plus all required fields as arguments. For example, if your user model uses `email` as the username field, and has `date_of_birth` as a required field, then `create_superuser` should be defined as:
+
+      ```Python
+        def create_superuser(self, email, date_of_birth, password=None):
+        # create superuser here
+        ...
+      ```
+
+#### AbstractBaseUser
+
+[Go Back to Contents](#contents)
+
+- **[AbstractBaseUser](https://docs.djangoproject.com/en/3.1/topics/auth/customizing/#django.contrib.auth.models.AbstractBaseUser)** provides the core implementation of a user model, including hashed passwords and tokenized password resets. You must then provide some key implementation details:
+
+  - **USERNAME_FIELD** A string describing the name of the field on the user model that is used as the unique identifier. This will usually be a username of some kind, but it can also be an email address, or any other unique identifier. The field must be unique (i.e., have unique=True set in its definition), unless you use a custom authentication backend that can support non-unique usernames.
+
+    ```Python
+      class MyUser(AbstractBaseUser):
+      identifier = models.CharField(max_length=40, unique=True)
+      ...
+      USERNAME_FIELD = 'identifier'
+    ```
+
+  - **is_active** A boolean attribute that indicates whether the user is considered “active”. This attribute is provided as an attribute on AbstractBaseUser defaulting to True. How you choose to implement it will depend on the details of your chosen auth backends.
+  - **is_staff** Returns True if the user is allowed to have access to the admin site.
+
+#### PermissionsMixin
+
+[Go Back to Contents](#contents)
+
+- **[PermissionsMixin](https://docs.djangoproject.com/en/3.1/topics/auth/customizing/#django.contrib.auth.models.PermissionsMixin)** (Custom users and permissions) - To make it easy to include Django’s permission framework into your own user class, Django provides `PermissionsMixin`. This is an abstract model you can include in the class hierarchy for your user model, giving you all the methods and database fields necessary to support Django’s permission model.
+
+### Config Auth Settings
+
+[Go Back to Contents](#contents)
+
+- in `app/config/settings.py`
+
+  - At the end of the file add
+
+    ```Bash
+      AUTH_USER_MODEL = 'core.User'
+      # Configure our app to use authentication using the following table
+      # core    = the name of the app
+      # User    = the table
+    ```
+
+### Migrations
+
+[Go Back to Contents](#contents)
+
+- Migrations are used to update a database's schema (structure) to match the code in the Models.
+- Migrations are used to evolve a database over time - as the requirements of the application change. However, they can be "destructive" (cause a loss of data), so be careful with migrations if you're working with an application in production.
+- Migrations in Django are just Python files that are created by running a command Django in Terminal.
+
+#### Makemigrations
+
+[Go Back to Contents](#contents)
+
+- The following command creates migration files for all models that have been added or changed since the last migration:
+
+  ```Bash
+    docker-compose run app sh -c "python manager.py makemigrations"
+  ```
+
+- The output in the terminal informs us that the following migration file was created: `app/core/migrations/0001_initial.py`
+- A migrations directory is created for an app the first time you run **makemigrations**.
+
+#### Migrate
+
+[Go Back to Contents](#contents)
+
+- Simply creating migration files does not update the database.
+- To synchronize the database's schema with the code in the migration files, we "migrate" using this command:
+
+  ```Bash
+    docker-compose run app sh -c "python manager.py migrate"
+  ```
+
+## Tests
+
+[Go Back to Contents](#contents)
+
+- To test our application, we need to import **TestCase** from `djando.test`
+
+  - To use the test model we need to create a `test_file_name.py` or a folder called `tests`. We cannot have both on the root of our app.
+  - Run the tests
+    - `docker-compose run app sh -c "python manage.py test"`
+
+- In `app/core/tests/test_models.py`
+
+  - Import the **TestCase** from `django.test`
+  - Bellow that we are going to import the `get_user_model` helper function to import our models. This is recommended because if we change our user model we will need to change all the tests that uses that model
+
+  ```Python
+    from django.test import TestCase
+    from django.contrib.auth import get_user_model
+
+
+    class ModelTests(TestCase):
+        def test_create_user_with_email_successful(self):
+            """Test creating a new user with an email is successful"""
+            email = 'test@test.com'
+            password = 'Test123'
+            user = get_user_model().objects.create_user(
+                email=email,
+                password=password
+            )
+            self.assertEqual(user.email, email)
+            self.assertTrue(user.check_password(password))
+  ```
