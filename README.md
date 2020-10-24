@@ -95,12 +95,12 @@
      - We do that for security purposes, if we don't define that, the image will run the application with the root account
 
      ```Python
-       RUN adduser -D user
-       # adduser = create user
-       # -D      = only for running applications
-       # user    = the name of the user
-       USER user
-       # USER user = Change the user to user
+       RUN adduser -D dockeruser
+       # adduser         = create a user
+       # -D              = only for running applications
+       # dockeruser      = the name of the user
+       USER dockeruser
+       # USER dockeruser = Change the user to dockeruser
      ```
 
   ```Python
@@ -351,14 +351,30 @@
               """
               Creates and save a new user
               """
+              # Checks if the email is valid/not empty
+              if not email:
+                  raise ValueError('Users must have an email address.')
               # Create a new user using - self.model() shorthand
-              user = self.model(email=email, **extra_fields)
+              # self.normalize_email() is a helper method from BaseUserManager that allow us to normalize the email
+              # https://docs.djangoproject.com/en/3.1/topics/auth/customizing/#django.contrib.auth.models.BaseUserManager.normalize_email
+              user = self.model(email=self.normalize_email(email), **extra_fields)
               # use the set_password helper function that comes with AbstractBaseUser to hash the password
               user.set_password(password)
               # using=self._db is only required when we are using multiple databases. But it's a good practice to add it anyway
               user.save(using=self._db)
+
               return user
 
+          # Create superuser function
+          def create_superuser(self, email, password):
+              """Creates and saves a new super user"""
+              # Uses the method that we already created to create a normal user
+              user = self.create_user(email, password)
+              user.is_superuser = True
+              user.is_staff = True
+              user.save(using=self._db)
+
+              return user
       # Create our user model and we are going to extend from AbstractBaseUser, PermissionsMixin
       class User(AbstractBaseUser, PermissionsMixin):
           """
