@@ -3,7 +3,6 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECRET_KEY = os.environ.get('SECRET_KEY')
 SECRET_KEY = "$+5x9n2g=vg2s4_yluxv_0cjg7wibx#sf%ov%p*jq%2txjj%@e"
 
 DEBUG = True

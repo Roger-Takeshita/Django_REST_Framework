@@ -17,8 +17,6 @@ services:
       - DB_NAME=app
       - DB_USER=postgres
       - DB_PASS=supersecretpassword
-    env_file:
-      - ./app/config/.env
     depends_on:
       - db
   db:

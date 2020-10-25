@@ -17,7 +17,6 @@
   - [Start New Project Using Docker](#start-new-project-using-docker)
     - [Create a New App Using Docker](#create-a-new-app-using-docker)
     - [Create Folder and Files](#create-folder-and-files)
-    - [Environment Variables](#environment-variables)
     - [Settings.py](#settingspy)
     - [Model](#model)
       - [BaseUserManager](#baseusermanager)
@@ -219,9 +218,6 @@
           - DB_NAME=app
           - DB_USER=postgres
           - DB_PASS=supersecretpassword
-        env_file:
-          # custom environment variables
-          - ./app/config/.env
         depends_on:
           # depends_on means that db will start before the app
           - db
@@ -257,8 +253,6 @@
           - DB_NAME=app
           - DB_USER=postgres
           - DB_PASS=supersecretpassword
-        env_file:
-          - ./app/config/.env
         depends_on:
           - db
       db:
@@ -428,17 +422,7 @@
 - Create the following files using my custom [touch](https://github.com/Roger-Takeshita/Shell-Script/blob/master/touch-open.sh) command
 
   ```Bash
-    touch app/core/tests/__init__.py + test_models.py app/config/.env app/core/management/__init__.py + wait_for_db.py
-  ```
-
-### Environment Variables
-
-[Go Back to Contents](#contents)
-
-- in `app/config/.env`
-
-  ```Bash
-    SECRET_KEY=$+5x9n2g=vg2s4_yluxv_0cjg7wibx#sf%ov%p*jq%2txjj%@e
+    touch app/core/tests/__init__.py + test_models.py app/core/management/__init__.py + wait_for_db.py
   ```
 
 ### Settings.py
@@ -449,8 +433,6 @@
 - in `app/config/settings.py`
 
   - Import the `os`, so we can import the environment variables that we defined in our `docker-compose.yml`
-  - Import environment variables
-    - `SECRET_KEY = os.environ.get('SECRET_KEY')`
   - Add our new app (`core`) into the **INSTALLED_APPS** array
   - Add **rest_framework**, responsible for creating our REST APIs
   - Add **rest_framework.authtoken**, responsible for creating authentication tokens
@@ -498,7 +480,7 @@
 
     BASE_DIR = Path(__file__).resolve().parent.parent
 
-    SECRET_KEY = os.environ.get('SECRET_KEY')
+    SECRET_KEY = "$+5x9n2g=vg2s4_yluxv_0cjg7wibx#sf%ov%p*jq%2txjj%@e"
 
     DEBUG = True
 
