@@ -39,6 +39,7 @@
         - [URLS (ROUTES)](#urls-routes)
         - [PROJECT URLS](#project-urls)
       - [Token Authentication](#token-authentication)
+      - [Manage User Endpoints](#manage-user-endpoints)
       - [Tests](#tests)
   - [Tests](#tests-1)
     - [Mocking](#mocking)
@@ -1241,6 +1242,120 @@
 
         ![](https://i.imgur.com/rmxhyn4.png)
 
+#### Manage User Endpoints
+
+[Go Back to Contents](#contents)
+
+- in `app/user/views.py`
+
+  - Create our **ManageUserView** to manage our logged in users endpoints
+  - Import **authentication** and **permissions** from `rest_framework`
+    - we are going to use with our user endpoints
+
+  ```Python
+    from rest_framework import generics, authentication, permissions
+    # import authentication and permissions, we are going to use with our
+    # user endpoints
+    from user.serializers import UserSerializer, AuthTokenSerializer
+    from rest_framework.authtoken.views import ObtainAuthToken
+    from rest_framework.settings import api_settings
+
+
+    class CreateUserView(generics.CreateAPIView):
+        """Create a new user in the system"""
+        serializer_class = UserSerializer
+
+
+    class CreateTokenView(ObtainAuthToken):
+        """Create a new token for user"""
+        serializer_class = AuthTokenSerializer
+        renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
+
+
+    # ! Create our manage user view and
+    # ! we inherits from generics.RetrieveUpdateAPIView
+    class ManageUserView(generics.RetrieveUpdateAPIView):
+        """Manage the authenticate user"""
+        serializer_class = UserSerializer
+        authentication_classes = (authentication.TokenAuthentication,)
+        # + authentication_classes is the mechanism that authenticate the user
+        # + in this case we are using TokenAuthentication, but could it be
+        # + cookie authentication, and so on..
+        permission_classes = (permissions.IsAuthenticated,)
+        # + permission_classes is the lvl of permission that the user has
+        # + in this case we are only requiring the user be authenticated to
+        # + use this API
+
+        # + We are going to override the get_object to retrieve the model
+        # + for logged in user, in other words, it will return the user that
+        # + is authenticated
+        def get_object(self):
+            """Retreive and return authenticate user"""
+            return self.request.user
+            # + Because of the permission_classes the request will have the
+            # + Authenticated user in it
+  ```
+
+- in `app/user/serializers.py`
+
+  - We need to override the **update** function to handle our update
+
+    ```Python
+      from django.contrib.auth import get_user_model, authenticate
+      from django.utils.translation import ugettext_lazy as _
+      from rest_framework import serializers
+
+
+      class UserSerializer(serializers.ModelSerializer):
+          """Serializer for the user object"""
+          class Meta:
+              ...
+
+          def create(self, validate_data):
+              ...
+
+          # + With update() is similar to get(), with update() we need
+          # + to pass the instance and validate_data
+          # - the instance will be the model linked to our user (get_user_mode())
+          # - the validate_data will be our incoming form (fields)
+          def update(self, instance, validate_data):
+              """Update a user, setting the password correctly and return it"""
+              password = validate_data.pop('password', None)
+              # + first we remove the password from the form
+              # - with .pop() function, we need to provide a default value
+              user = super().update(instance, validate_data)
+              # + with the rest of of the form we update the instance with
+              # + validate_data
+              # - The super() will call ModelSerializer the default udpate function
+
+              if password:
+                  user.set_password(password)
+              user.save()
+
+              return user
+
+
+      class AuthTokenSerializer(serializers.Serializer):
+          ...
+    ```
+
+- in `app/user/urls.py`
+
+  - Update our route to handel put/patch update
+
+    ```Python
+      from django.urls import path
+      from user import views
+
+      app_name = 'user'
+
+      urlpatterns = [
+          path('create/', views.CreateUserView.as_view(), name='create'),
+          path('token/', views.CreateTokenView.as_view(), name='token'),
+          path('me/', views.ManageUserView.as_view(), name='me')
+      ]
+    ```
+
 #### Tests
 
 [Go Back to Contents](#contents)
@@ -1264,6 +1379,7 @@
     # ! Get the user url
     CREATE_USER_URL = reverse('user:create')
     TOKEN_URL = reverse('user:token')
+    ME_URL = reverse('user:me')
 
 
     def create_user_db(**params):
@@ -1357,6 +1473,57 @@
             res = self.client.post(TOKEN_URL, {'email': 'one', 'password': ''})
             self.assertNotIn('token', res.data)
             self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+        def test_retrive_user_unauthorized(self):
+                """Test that authentication is required for users"""
+                res = self.client.get(ME_URL)
+                self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+    class PrivateUserApiTests(TestCase):
+        """Test API requests that require authentication"""
+
+        def setUp(self):
+            payload = {
+                "email": "authenticated@test.com",
+                "password": "test123",
+                "name": "Roger Authenticated"
+            }
+            self.user = create_user_db(**payload)
+            self.client = APIClient()
+            self.client.force_authenticate(user=self.user)
+            # + uses the client helper function (force_authenticate) to
+            # + authenticate the users
+            # - in other words, all requests that we do with this user
+            # - will be authenticated
+
+        def test_retrive_profile_success(self):
+            """Test retrieving profile for logged in used"""
+            res = self.client.get(ME_URL)
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(res.data, {
+                'name': self.user.name,
+                'email': self.user.email
+            })
+
+        def test_post_profile_not_allowed(self):
+            """Test that POST is not allowed on the me url"""
+            res = self.client.post(ME_URL, {})
+            self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        def test_update_user_profile(self):
+            """Test updating the user profile for authenticated user"""
+            payload = {
+                "name": "Roger Updated",
+                "password": "newpassword123"
+            }
+            res = self.client.patch(ME_URL, payload)
+            self.user.refresh_from_db()
+            # + helper function to refresh the database with the latest update
+            self.assertEqual(self.user.name, payload["name"])
+            self.assertTrue(self.user.check_password(payload["password"]))
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+
   ```
 
 ## Tests
