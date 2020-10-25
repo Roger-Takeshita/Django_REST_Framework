@@ -38,6 +38,7 @@
         - [VIEW (CONTROLLERS)](#view-controllers)
         - [URLS (ROUTES)](#urls-routes)
         - [PROJECT URLS](#project-urls)
+      - [Token Authentication](#token-authentication)
       - [Tests](#tests)
   - [Tests](#tests-1)
     - [Mocking](#mocking)
@@ -899,6 +900,7 @@
 - in `app/config/settings.py`
 
   - Add our new **user** app
+  - Install **rest_framework.authtoken** to create auth token
 
     ```Python
       INSTALLED_APPS = [
@@ -1038,6 +1040,207 @@
       ]
     ```
 
+#### Token Authentication
+
+[Go Back to Contents](#contents)
+
+- in `app/user/serializers.py`
+
+  - We are going to create a new serializer to handle auth token
+
+    ```Python
+      from django.contrib.auth import get_user_model, authenticate
+      # django comes authenticate funcion, it's a helper function to allow use
+      # easily authenticate a user by providing the username and password
+      from django.utils.translation import ugettext_lazy as _
+      # Import the translation module
+      from rest_framework import serializers
+
+
+      class UserSerializer(serializers.ModelSerializer):
+          """Serializer for the user object"""
+          class Meta:
+              model = get_user_model()
+              fields = ('email', 'password', 'name')
+              extra_kwargs = {
+                  'password': {
+                      'write_only': True,
+                      'min_length': 5
+                  }
+              }
+
+          def create(self, validate_data):
+              """Create a new user with encrypted password and return it"""
+              return get_user_model().objects.create_user(**validate_data)
+
+
+      class AuthTokenSerializer(serializers.Serializer):
+          # we inherit the auth token from serializers.Serializer
+          """Serializer for the user authenticate object"""
+          # + Create our serializer fields
+          email = serializers.CharField()
+          password = serializers.CharField(
+              style={'input_type': 'password'},
+              trim_whitespace=False
+          )
+
+          # ! Create our validate function that receives the attributes
+          # ! from our serializer in this case email and password will be
+          # ! parsed as attrs
+          def validate(self, attrs):
+              """Validate and authenticate the user"""
+              # + attrs.get is how we get the attribute
+              email = attrs.get('email')
+              password = attrs.get('password')
+              user = authenticate(
+                  request=self.context.get('request'),
+                  username=email,
+                  password=password
+              )
+              # + 1st argument is the request that we want to authenticate
+              # - self.context.get('request') we can have access to the request
+              # - that was made
+              # + 2nd argument is the username
+              # + 3rd argument is the password
+
+              if not user:
+                  # + if not enable to authenticate raise a ValidationError
+                  msg = _('Unable to authenticate with provided credentials.')
+                  raise serializers.ValidationError(msg, code='authentication')
+
+              # + if success, add a user field to attrs and return the attrs
+              attrs['user'] = user
+              # + we always return the attrs object
+              return attrs
+    ```
+
+- in `app/user/views.py`
+
+  - **ObtainAuthToken**
+
+    - When using **[TokenAuthentication](https://www.django-rest-framework.org/api-guide/authentication/#by-exposing-an-api-endpoint)**, you may want to provide a mechanism for clients to obtain a token given the username and password. REST framework provides a built-in view to provide this behavior. To use it, add the obtain_auth_token view to your URLconf:
+
+      ```Python
+        from rest_framework.authtoken import views
+        urlpatterns += [
+            path('api-token-auth/', views.obtain_auth_token)
+        ]
+      ```
+
+    - The `obtain_auth_token` view will return a **JSON** response when valid `username` and `password` fields are POSTed to the view using form data or JSON:
+
+      ```Python
+        { 'token' : '9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b' }
+      ```
+
+    - If you need a customized version of the `obtain_auth_token` view, you can do so by subclassing the **ObtainAuthToken** view class, and using that in your url conf instead.
+    - For example, you may return additional user information beyond the **token** value:
+
+      ```Python
+        from rest_framework.authtoken.views import ObtainAuthToken
+        from rest_framework.authtoken.models import Token
+        from rest_framework.response import Response
+
+        class CustomAuthToken(ObtainAuthToken):
+
+            def post(self, request, *args, **kwargs):
+                serializer = self.serializer_class(data=request.data,
+                                                  context={'request': request})
+                serializer.is_valid(raise_exception=True)
+                user = serializer.validated_data['user']
+                token, created = Token.objects.get_or_create(user=user)
+                return Response({
+                    'token': token.key,
+                    'user_id': user.pk,
+                    'email': user.email
+                })
+      ```
+
+      - And in your `urls.py`:
+
+        ```Python
+          urlpatterns += [
+              path('api-token-auth/', CustomAuthToken.as_view())
+          ]
+        ```
+
+  - **api_settings**
+
+    - If you need to access the values of REST framework's API settings in your project, you should use the **api_settings** object. For example.
+
+      ```Python
+        from rest_framework.settings import api_settings
+
+        print(api_settings.DEFAULT_AUTHENTICATION_CLASSES)
+      ```
+
+    - The **api_settings** object will check for any user-defined settings, and otherwise fall back to the default values. Any setting that uses string import paths to refer to a class will automatically import and return the referenced class, instead of the string literal.
+
+  ```Python
+    from rest_framework import generics
+    from user.serializers import UserSerializer, AuthTokenSerializer
+    from rest_framework.authtoken.views import ObtainAuthToken
+    # Import ObtainAuthToken
+    from rest_framework.settings import api_settings
+    # Import api_settings
+
+
+    class CreateUserView(generics.CreateAPIView):
+        """Create a new user in the system"""
+        serializer_class = UserSerializer
+
+
+    class CreateTokenView(ObtainAuthToken):
+        """Create a new token for user"""
+        serializer_class = AuthTokenSerializer
+        renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
+        # + If you need to access the values of REST framework's API settings in
+        # +     your project, you should use the api_settings object. For example.
+        # + The api_settings object will check for any user-defined settings, and
+        # +     otherwise fall back to the default values. Any setting that uses
+        # +     string import paths to refer to a class will automatically import
+        # +     and return the referenced class, instead of the string literal.
+  ```
+
+- in `app/user/urls.py`
+
+  - Add a new route to handle token
+
+    ```Python
+      from django.urls import path
+      from user import views
+
+      app_name = 'user'
+
+      urlpatterns = [
+          path('create/', views.CreateUserView.as_view(), name='create'),
+          path('token/', views.CreateTokenView.as_view(), name='token'),
+      ]
+    ```
+
+- On `broswer`
+
+  - if we naviagte to [http://localhost:8000/api/user/](http://localhost:8000/api/user/)
+
+    - We will see that we have 2 routes available
+
+      ![](https://i.imgur.com/QkgnTy6.png)
+
+    - [http://localhost:8000/api/user/create/](http://localhost:8000/api/user/create/)
+
+      ![](https://i.imgur.com/3b8mgRS.png)
+
+      - Create a new user
+
+        ![](https://i.imgur.com/O4FCLHW.png)
+        ![](https://i.imgur.com/GrzAnSc.png)
+
+    - [http://localhost:8000/api/user/token/](http://localhost:8000/api/user/token/)
+
+      - Atuthenticate the user
+
+        ![](https://i.imgur.com/rmxhyn4.png)
+
 #### Tests
 
 [Go Back to Contents](#contents)
@@ -1060,6 +1263,7 @@
 
     # ! Get the user url
     CREATE_USER_URL = reverse('user:create')
+    TOKEN_URL = reverse('user:token')
 
 
     def create_user_db(**params):
@@ -1111,6 +1315,48 @@
             user_exists = get_user_model().objects.filter(
                 email=payload['email']).exists()
             self.assertFalse((user_exists))
+
+        def test_create_token_for_user(self):
+            """Test that a token is created for the user"""
+            payload = {
+                'email': 'test@test.com',
+                'password': 'test123'
+            }
+            create_user_db(**payload)
+            res = self.client.post(TOKEN_URL, payload)
+            self.assertIn('token', res.data)
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        def test_create_token_invalid_credentials(self):
+            """Test that token is not created if invalid credentials are given"""
+            payload = {
+                'email': 'test@test.com',
+                'password': 'test123'
+            }
+            create_user_db(**payload)
+            wrong_payload = {
+                'email': 'test@test.com',
+                'password': 'wrong_password'
+            }
+            res = self.client.post(TOKEN_URL, wrong_payload)
+            self.assertNotIn('token', res.data)
+            self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+        def test_create_token_no_user(self):
+            """Test that token is not created if user doesn't exist"""
+            bad_payload = {
+                'email': 'no_user@test.com',
+                'password': 'test123'
+            }
+            res = self.client.post(TOKEN_URL, bad_payload)
+            self.assertNotIn('token', res.data)
+            self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+        def test_create_token_missing_field(self):
+            """Test that email and password are required"""
+            res = self.client.post(TOKEN_URL, {'email': 'one', 'password': ''})
+            self.assertNotIn('token', res.data)
+            self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
   ```
 
 ## Tests
