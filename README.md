@@ -30,7 +30,16 @@
     - [Admin Panel](#admin-panel)
     - [Management Commands](#management-commands)
     - [Create Superuser](#create-superuser)
-  - [Tests](#tests)
+    - [Start User App](#start-user-app)
+      - [Create Folder and Files](#create-folder-and-files-1)
+      - [Register New App](#register-new-app)
+      - [User's APIs](#users-apis)
+        - [SERIALIZERS](#serializers)
+        - [VIEW (CONTROLLERS)](#view-controllers)
+        - [URLS (ROUTES)](#urls-routes)
+        - [PROJECT URLS](#project-urls)
+      - [Tests](#tests)
+  - [Tests](#tests-1)
     - [Mocking](#mocking)
       - [Patch()](#patch)
     - [Management Commands](#management-commands-1)
@@ -441,10 +450,14 @@
   - Import environment variables
     - `SECRET_KEY = os.environ.get('SECRET_KEY')`
   - Add our new app (`core`) into the **INSTALLED_APPS** array
+  - Add **rest_framework**, responsible for creating our REST APIs
+  - Add **rest_framework.authtoken**, responsible for creating authentication tokens
 
     ```Python
       INSTALLED_APPS = [
           'core',
+          'rest_framework',
+          'rest_framework.authtoken',
           'django.contrib.admin',
           'django.contrib.auth',
           'django.contrib.contenttypes',
@@ -491,6 +504,8 @@
 
     INSTALLED_APPS = [
         'core',
+        'rest_framework',
+        'rest_framework.authtoken',
         'django.contrib.admin',
         'django.contrib.auth',
         'django.contrib.contenttypes',
@@ -838,6 +853,264 @@
 
   ```Bash
     docker-compose run app sh -c "python manage.py createsuperuser"
+  ```
+
+### Start User App
+
+[Go Back to Contents](#contents)
+
+- Now we are going to create a **user** app
+- This app will allow us to CRUD our user's endpoints
+- On `Terminal`
+
+  ```Bash
+    docker-compose run --rm app sh -c "python manage.py startapp user"
+  ```
+
+#### Create Folder and Files
+
+[Go Back to Contents](#contents)
+
+- After creating the user's app we are going to delete some files and create some files
+
+  ```Bash
+    .
+    ├── migrations          <--- Delete
+    │   └── __init__.py     <--- Delete
+    ├── __init__.py
+    ├── admin.py            <--- Delete
+    ├── apps.py
+    ├── models.py           <--- Delete
+    ├── tests.py            <--- Delete
+    └── views.py
+  ```
+
+  - we are deleting the migration, admin.py, models.py, because we are using our **core** app for that, so we don't need them here
+  - we are deleting the tests.py, because we need a folder for our tests
+
+  ```Bash
+    touch app/user/tests/__init__.py + test_user_api.py app/user/urls.py + serializers.py
+  ```
+
+#### Register New App
+
+[Go Back to Contents](#contents)
+
+- in `app/config/settings.py`
+
+  - Add our new **user** app
+
+    ```Python
+      INSTALLED_APPS = [
+          'core',
+          'user',
+          'rest_framework',
+          'rest_framework.authtoken',
+          'django.contrib.admin',
+          'django.contrib.auth',
+          'django.contrib.contenttypes',
+          'django.contrib.sessions',
+          'django.contrib.messages',
+          'django.contrib.staticfiles',
+      ]
+    ```
+
+#### User's APIs
+
+##### SERIALIZERS
+
+[Go Back to Contents](#contents)
+
+- in `app/user/serializers.py`
+
+  - Import our model (`get_user_model`)
+  - Import **serializers** from `rest_framework`
+  - Create a sub-class named **Meta**
+    - Responsible for serializing the incoming/exporting data as JSON
+    - We need to add **model** and **fields** - **(required)**
+    - extra_kwargs if we want to add extra config to a certain field
+  - Override the **create()** to use our custom `create_user`
+
+  ```Python
+    from django.contrib.auth import get_user_model
+    # import user model
+    # https://docs.djangoproject.com/en/3.1/topics/auth/customizing/#django.contrib.auth.get_user_model
+    from rest_framework import serializers
+    # https://www.django-rest-framework.org/api-guide/serializers/#modelserializer
+
+
+    class UserSerializer(serializers.ModelSerializer):
+        # + To create a new serializer we need to inherit
+        # + from serializers.ModelSerializer
+        # - Basically a serializer is a parser that converts
+        # - Incoming data or exporting/sending data as JSON
+        """Serializer for the user object"""
+        class Meta:
+            model = get_user_model()
+            # ! 1) we need to define the model
+            fields = ('email', 'password', 'name')
+            # ! 2) these are the fields that we want to include
+            # ! in our serializer to be converted to/from JSON
+            # ! these are the fields available to read/write
+            extra_kwargs = {
+                'password': {
+                    'write_only': True,
+                    'min_length': 5
+                }
+            }
+            # ! 3) extra_kwargs, allows us to configure extra
+            # ! settings in our ModelSerializer
+            # + In this case we are ensuring that our password is
+            # + write_only (we connot read the password) and the
+            # + min_length is 5 characters
+
+        # ! We now need to overwrite the create function
+        def create(self, validate_data):
+            # https://www.django-rest-framework.org/api-guide/generic-views/#createapiview
+            """Create a new user with encrypted password and return it"""
+            # + In this case we are using our custom create_user from our
+            # + UserManager to create a new user and hash de password
+            # - The validate_data is our fields that we specified in our
+            # - Meta class
+            # ? The create() method, receives the validate_data as second arg
+            return get_user_model().objects.create_user(**validate_data)
+  ```
+
+##### VIEW (CONTROLLERS)
+
+[Go Back to Contents](#contents)
+
+- in `app/user/views.py`
+
+  - Create our view to create users
+
+    ```Python
+      from rest_framework import generics
+      # Import the generics we need the CreateAPIView to create our API
+      from user.serializers import UserSerializer
+      # Import the user serializer
+
+
+      class CreateUserView(generics.CreateAPIView):
+          """Create a new user in the system"""
+          serializer_class = UserSerializer
+          # ! all we need to specify in our class is the serializer_class
+          # ! and point to the our Serializer
+    ```
+
+##### URLS (ROUTES)
+
+[Go Back to Contents](#contents)
+
+- in `app/user/urls.py`
+
+  ```Python
+    from django.urls import path
+    # Import path to build our routes
+    from user import views
+    # import the the user views from user
+
+    app_name = 'user'
+    # The app_name is necessary to help use identify where the request is coming
+    # from when we use the reverse method to get the url
+
+    urlspatterns = [
+        path('create/', views.CreateUserView.as_view(), name='create'),
+    ]
+  ```
+
+##### PROJECT URLS
+
+[Go Back to Contents](#contents)
+
+- in `app/config/urls.py`
+
+  - Import **include**
+  - Add a new route to the user's app
+
+    ```Python
+      from django.contrib import admin
+      from django.urls import path, include
+
+      urlpatterns = [
+          path('admin/', admin.site.urls),
+          path('api/user/', include('user.urls'))
+      ]
+    ```
+
+#### Tests
+
+[Go Back to Contents](#contents)
+
+- in `app/user/tests/test_user_api.py`
+
+  ```Python
+    from django.test import TestCase
+    # import our test case
+    from django.contrib.auth import get_user_model
+    # import our user model
+    from django.urls import reverse
+    # import reverse to generate our api urls
+
+    # ! Import rest_framework helper test tools
+    from rest_framework.test import APIClient
+    # import APIClient responsible for making requests to our APIs and check what is the response
+    from rest_framework import status
+    # import status just to convert the status code in a more readable form
+
+    # ! Get the user url
+    CREATE_USER_URL = reverse('user:create')
+
+
+    def create_user_db(**params):
+        # + Helper function to create multiple users for our tests
+        return get_user_model().objects.create_user(**params)
+
+
+    class PublicUserApiTests(TestCase):
+        """Test the users API (public)"""
+
+        def setUp(self):
+            # create a variable (client)
+            # assign the APIClient() function to make http requests
+            self.client = APIClient()
+
+        def test_create_valid_user_success(self):
+            """Test creating user with valid payload is successful"""
+            payload = {
+                'email': 'test@test.com',
+                'password': 'test123',
+                'name': 'Test Name'
+            }
+            res = self.client.post(CREATE_USER_URL, payload)
+            self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+            user = get_user_model().objects.get(**res.data)
+            self.assertTrue(user.check_password(payload['password']))
+            self.assertNotIn('password', res.data)
+
+        def test_user_exists(self):
+            """Test creating user that already exists fails"""
+            payload = {
+                'email': 'test@test.com',
+                'password': 'test123',
+                'name': 'Test Name'
+            }
+            create_user_db(**payload)
+            res = self.client.post(CREATE_USER_URL, payload)
+            self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+        def test_password_too_short(self):
+            """The password must be more than 5 characters"""
+            payload = {
+                'email': 'test@test.com',
+                'password': '123',
+                'name': 'Test Name'
+            }
+            res = self.client.post(CREATE_USER_URL, payload)
+            self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+            user_exists = get_user_model().objects.filter(
+                email=payload['email']).exists()
+            self.assertFalse((user_exists))
   ```
 
 ## Tests
