@@ -16,6 +16,7 @@
       - [Config Flake8](#config-flake8)
   - [Start New Project Using Docker](#start-new-project-using-docker)
     - [Create a New App Using Docker](#create-a-new-app-using-docker)
+  - [Core App](#core-app)
     - [Create Folder and Files](#create-folder-and-files)
     - [Settings.py](#settingspy)
     - [Model](#model)
@@ -29,21 +30,34 @@
     - [Admin Panel](#admin-panel)
     - [Management Commands](#management-commands)
     - [Create Superuser](#create-superuser)
-    - [Start User App](#start-user-app)
-      - [Create Folder and Files](#create-folder-and-files-1)
-      - [Register New App](#register-new-app)
-      - [User's APIs](#users-apis)
-        - [SERIALIZERS](#serializers)
-        - [VIEW (CONTROLLERS)](#view-controllers)
-        - [URLS (ROUTES)](#urls-routes)
-        - [PROJECT URLS](#project-urls)
+    - [Core - Tests](#core---tests)
+      - [Mocking](#mocking)
+        - [PATCH()](#patch)
+        - [MANAGEMENT COMMANDS](#management-commands-1)
+  - [User App](#user-app)
+    - [Create Folder and Files](#create-folder-and-files-1)
+    - [Register New App](#register-new-app)
+    - [User's APIs](#users-apis)
+      - [Serializers](#serializers)
+      - [View (Controllers)](#view-controllers)
+      - [Urls (Routes)](#urls-routes)
+      - [Project Urls](#project-urls)
       - [Token Authentication](#token-authentication)
       - [Manage User Endpoints](#manage-user-endpoints)
-      - [Tests](#tests)
-  - [Tests](#tests-1)
-    - [Mocking](#mocking)
-      - [Patch()](#patch)
-    - [Management Commands](#management-commands-1)
+      - [User - Tests](#user---tests)
+  - [Recipe APP](#recipe-app)
+    - [Create a Recipe App](#create-a-recipe-app)
+    - [Recipe - Folder and Files](#recipe---folder-and-files)
+    - [Recipe - Register a New App](#recipe---register-a-new-app)
+    - [Recipe - Update the Models](#recipe---update-the-models)
+      - [Recipe - Migrations](#recipe---migrations)
+    - [Recipe - Register App Admin Panel](#recipe---register-app-admin-panel)
+    - [Recipe - Tag Tests](#recipe---tag-tests)
+    - [Recipe - Serializer](#recipe---serializer)
+    - [Recipe - Views](#recipe---views)
+    - [Recipe - Urls](#recipe---urls)
+    - [Register Recipe Base Url](#register-recipe-base-url)
+    - [Recipe - Tests](#recipe---tests)
 
 # FOLDER AND FILES
 
@@ -309,6 +323,7 @@
 
 - [Travis CI Website](https://travis-ci.org/)
 - [Travis CI Tutorial](https://docs.travis-ci.com/user/tutorial/)
+- [Travis CI - Project Build](https://travis-ci.org/github/Roger-Takeshita/Django_REST_Framework)
 - Travis CI is a hosted continuous integration service used to build and test software projects hosted at GitHub and Bitbucket. Travis CI provides various paid plans for private projects, and a free plan for open source.
 
 #### Config .travis.yml
@@ -352,9 +367,10 @@
 - Run the following command to start a new project in docker
 
   ```Bash
-    docker-compose run app sh -c "django-admin.py startproject config ."
+    docker-compose run --rm app sh -c "django-admin.py startproject config ."
 
     # docker-compose run                      = docker command to run command
+    # --rm                                    = removes the previous app
     # app                                     = the name of our service
     # sh -c                                   = shell command
     # "django-admin.py startproject config ." = the command
@@ -370,9 +386,10 @@
 - Run the following command to start a new app in docker
 
   ```Bash
-    docker-compose run app sh -c "python manager.py startapp core"
+    docker-compose run --rm app sh -c "python manager.py startapp core"
 
     # docker-compose run                = docker command to run command
+    # --rm                              = removes the previous app
     # app                               = the name of our service
     # sh -c                             = shell command
     # "python manager.py startapp core" = the command
@@ -414,6 +431,8 @@
     ├── README.md
     └── requirements.txt
   ```
+
+## Core App
 
 ### Create Folder and Files
 
@@ -711,7 +730,7 @@
 - The following command creates migration files for all models that have been added or changed since the last migration:
 
   ```Bash
-    docker-compose run app sh -c "python manager.py makemigrations"
+    docker-compose run --rm app sh -c "python manager.py makemigrations"
   ```
 
 - The output in the terminal informs us that the following migration file was created: `app/core/migrations/0001_initial.py`
@@ -725,7 +744,7 @@
 - To synchronize the database's schema with the code in the migration files, we "migrate" using this command:
 
   ```Bash
-    docker-compose run app sh -c "python manager.py migrate"
+    docker-compose run --rm app sh -c "python manager.py migrate"
   ```
 
 ### Admin Panel
@@ -836,10 +855,229 @@
 - On `Terminal`
 
   ```Bash
-    docker-compose run app sh -c "python manage.py createsuperuser"
+    docker-compose run --rm app sh -c "python manage.py createsuperuser"
   ```
 
-### Start User App
+### Core - Tests
+
+[Go Back to Contents](#contents)
+
+- To test our application, we need to import **TestCase** from `djando.test`
+
+  - To use the test model we need to create a `test_file_name.py` or a folder called `tests`. We cannot have both on the root of our app.
+  - Run the tests
+    - `docker-compose run --rm app sh -c "python manage.py test"`
+
+- In `app/core/tests/test_models.py`
+
+  - Import the **TestCase** from `django.test`
+  - Bellow that we are going to import the `get_user_model` helper function to import our models. This is recommended because if we change our user model we will need to change all the tests that uses that model
+  - Manually managing a user’s password
+    - If you’d like to manually authenticate a user by comparing a plain-text password to the hashed password in the database, use the convenience function [check_password()](https://docs.djangoproject.com/en/3.1/topics/auth/passwords/#module-django.contrib.auth.hashers). It takes two arguments: the plain-text password to check, and the full value of a user’s password field in the database to check against, and returns True if they match, False otherwise.
+
+  ```Python
+    from django.test import TestCase
+    from django.contrib.auth import get_user_model
+
+    def sample_user():
+        """Create a sample user"""
+        user = {
+            "email": "test@test.com",
+            "password": "test123",
+            "name": "test"
+        }
+        return get_user_model().objects.create(**user)
+
+    class ModelTests(TestCase):
+        def test_create_user_with_email_successful(self):
+            """Test creating a new user with an email is successful"""
+            email = 'test@test.com'
+            password = 'Test123'
+            user = get_user_model().objects.create_user(
+                email=email,
+                password=password
+            )
+            self.assertEqual(user.email, email)
+            self.assertTrue(user.check_password(password))
+
+        def test_new_user_email_normalized(self):
+            """Test the email for a new user is normalized"""
+            email = 'test@TEST.COM'
+            user = get_user_model().objects.create_user(email, 'Test123')
+            self.assertEqual(user.email, email.lower())
+
+        def test_new_user_invalid_email(self):
+            """Test creating user with no email raises error"""
+            with self.assertRaises(ValueError):
+                get_user_model().objects.create_user(None, 'Tes123')
+
+        def test_create_new_superuser(self):
+            """Test creating a new superuser"""
+            email = 'test@test.com'
+            password = 'Test123'
+            user = get_user_model().objects.create_superuser(email, password)
+            self.assertTrue(user.is_superuser)
+            self.assertTrue(user.is_staff)
+
+        def test_tag_str(self):
+            """Test the tag string representation"""
+            tag = models.Tag.objects.create(
+                user=sample_user(),
+                name="Vegan"
+            )
+            self.assertEqual(str(tag), tag.name)
+  ```
+
+- In `app/core/tests/test_admin.py`
+
+  - Import **[Client](https://docs.djangoproject.com/en/2.2/topics/testing/tools/#overview-and-a-quick-example)** from `django.test`
+    - Client allows us to make test requests to our application
+  - Import **[reverse](https://docs.djangoproject.com/en/3.1/ref/contrib/admin/)** from `django.urls`
+    - reverse allows us to generate urls for our admin page
+
+  ```Python
+    from django.test import TestCase, Client
+    from django.contrib.auth import get_user_model
+    from django.urls import reverse
+
+
+    class AdminSiteTests(TestCase):
+        def setUp(self):
+            """setUp function that runs before each test"""
+            # ! Add a client variable set to the Client(). So though self
+            # ! we can have access to this variable
+            self.client = Client()
+            # ! create a new superuser and set to admin_user
+            self.admin_user = get_user_model().objects.create_superuser(
+                email='admin@test.com',
+                password='password123'
+            )
+            # + uses the client helper function (force_login) to login the user
+            # + with django authentication
+            self.client.force_login(self.admin_user)
+            # ! create a normal user
+            self.user = get_user_model().objects.create_user(
+                email='noral_user@test.com',
+                password='password123',
+                name='Normal user full name'
+            )
+
+        def test_users_listed(self):
+            """TEst that users are listed on user page"""
+            # {{ app_label }}_{{ model_name }}_changelist, django docs
+            # this method will dynamically generate the url for our admin page
+            # so we don't need to hard code
+            url = reverse('admin:core_user_changelist')
+            res = self.client.get(url)
+            self.assertContains(res, self.user.name)
+            self.assertContains(res, self.user.email)
+
+        def test_user_change_page(self):
+            """Test that the user edit page works"""
+            # ! url = /admin/core/user/1
+            url = reverse('admin:core_user_change', args=[self.user.id])
+            res = self.client.get(url)
+            self.assertEqual(res.status_code, 200)
+
+        def test_create_user_page(self):
+            """Test that create user page works"""
+            url = reverse('admin:core_user_add')
+            res = self.client.get(url)
+            self.assertEqual(res.status_code, 200)
+  ```
+
+#### Mocking
+
+[Go Back to Contents](#contents)
+
+- Change the behavior of dependencies
+- Avoids unintended side-effects
+- Never depend on external services
+
+  - Can't guarantee they will be available
+  - Make tests unpredictable/unreliable
+
+- [Mocking](https://docs.python.org/3/library/unittest.mock.html)
+- `unittest.mock` is a library for testing in Python. It allows you to replace parts of your system under test with mock objects and make assertions about how they have been used.
+- `unittest.mock` provides a core Mock class removing the need to create a host of stubs throughout your test suite. After performing an action, you can make assertions about which methods / attributes were used and arguments they were called with. You can also specify return values and set needed attributes in the normal way.
+
+##### PATCH()
+
+[Go Back to Contents](#contents)
+
+- Additionally, mock provides a `patch()` decorator that handles patching module and class level attributes within the scope of a test, along with sentinel for creating unique objects.
+- The patch decorators are used for patching objects only within the scope of the function they decorate. They automatically handle the unpatching for you, even if exceptions are raised. All of these functions can also be used in with statements or as class decorators.
+
+##### MANAGEMENT COMMANDS
+
+[Go Back to Contents](#contents)
+
+- [django.core.management](https://docs.djangoproject.com/en/3.1/howto/custom-management-commands/#module-django.core.management)
+- [django.core.management.call_command](https://docs.djangoproject.com/en/3.1/ref/django-admin/#django.core.management.call_command)
+- [Django Unittest Wait for Database](https://stackoverflow.com/questions/52621819/django-unit-test-wait-for-database)
+- Running management commands inside our source code
+
+  ```Python
+    django.core.management.call_command(name, *args, **options)
+  ```
+
+- To call a management command from code use `call_command`.
+
+- **name**
+  - the name of the command to call or a command object. Passing the name is preferred unless the object is required for testing.
+- **\*args**
+  - a list of arguments accepted by the command. Arguments are passed to the argument parser, so you can use the same style as you would on the command line. For example, **call_command('flush', '--verbosity=0')**.
+- **\*\*options**
+
+  - named options accepted on the command-line. Options are passed to the command without triggering the argument parser, which means you’ll need to pass the correct type. For example, **call_command('flush', verbosity=0)** (zero must be an integer rather than a string).
+
+- Some command options have different names when using `call_command()` instead of **django-admin** or **manage.py**. For example, `django-admin createsuperuser --no-input` translates to `call_command('createsuperuser', interactive=False)`. To find what keyword argument name to use for `call_command()`, check the command’s source code for the dest argument passed to `parser.add_argument()`.
+
+- in `app/core/tests/test_commands.py`
+
+  ```Python
+    from unittest.mock import patch
+    from django.core.management import call_command
+    from django.db.utils import OperationalError
+    from django.test import TestCase
+
+
+    class CommandTests(TestCase):
+        def test_wait_for_db_ready(self):
+            """Test waiting for db when db is available"""
+            with patch('django.db.utils.ConnectionHandler.__getitem__') as gi:
+                # + The way we test if the database is available in Django is using
+                # + django.db.utils.ConnectionHandler, this will try to retreive
+                # + the default database __getitem__ is the function that
+                # + retrieves the database
+                gi.return_value = True
+                # + the patch() function returns a mock object where we have
+                # + two properties:
+                # -     return_value
+                # -     call_count
+                call_command('wait_for_db')
+                # + test our command with call_command
+                # + wait_for_db could be any name
+                self.assertEqual(gi.call_count, 1)
+
+        @patch('time.sleep', return_value=True)
+        # + When we use patch as a decorator
+        # + we can mock the return value as the second argument
+        def test_wait_for_db(self, ts):
+            # + we have to add a second argument even if we are not going to use it
+            # + if we don't do that it will give us an error
+            # - in this case we are mocking the timer, so we can speed up the test
+            """Test waiting for db"""
+            with patch('django.db.utils.ConnectionHandler.__getitem__') as gi:
+                gi.side_effect = [OperationalError] * 5 + [True]
+                # + the unittest.mock has side_effect method
+                # + we can apply to the function that we are mocking
+                # + this way we can force the function rase an error
+                call_command('wait_for_db')
+                self.assertEqual(gi.call_count, 6)
+  ```
+
+## User App
 
 [Go Back to Contents](#contents)
 
@@ -851,7 +1089,7 @@
     docker-compose run --rm app sh -c "python manage.py startapp user"
   ```
 
-#### Create Folder and Files
+### Create Folder and Files
 
 [Go Back to Contents](#contents)
 
@@ -876,7 +1114,7 @@
     touch app/user/tests/__init__.py + test_user_api.py app/user/urls.py + serializers.py
   ```
 
-#### Register New App
+### Register New App
 
 [Go Back to Contents](#contents)
 
@@ -900,9 +1138,9 @@
       ]
     ```
 
-#### User's APIs
+### User's APIs
 
-##### SERIALIZERS
+#### Serializers
 
 [Go Back to Contents](#contents)
 
@@ -961,7 +1199,7 @@
             return get_user_model().objects.create_user(**validate_data)
   ```
 
-##### VIEW (CONTROLLERS)
+#### View (Controllers)
 
 [Go Back to Contents](#contents)
 
@@ -983,7 +1221,7 @@
           # ! and point to the our Serializer
     ```
 
-##### URLS (ROUTES)
+#### Urls (Routes)
 
 [Go Back to Contents](#contents)
 
@@ -1004,7 +1242,7 @@
     ]
   ```
 
-##### PROJECT URLS
+#### Project Urls
 
 [Go Back to Contents](#contents)
 
@@ -1338,7 +1576,7 @@
       ]
     ```
 
-#### Tests
+#### User - Tests
 
 [Go Back to Contents](#contents)
 
@@ -1505,208 +1743,430 @@
             self.assertEqual(self.user.name, payload["name"])
             self.assertTrue(self.user.check_password(payload["password"]))
             self.assertEqual(res.status_code, status.HTTP_200_OK)
-
   ```
 
-## Tests
+## Recipe APP
+
+### Create a Recipe App
 
 [Go Back to Contents](#contents)
 
-- To test our application, we need to import **TestCase** from `djando.test`
+```Bash
+  docker-compose run --rm app sh -c "python manage.py start recipe"
+```
 
-  - To use the test model we need to create a `test_file_name.py` or a folder called `tests`. We cannot have both on the root of our app.
-  - Run the tests
-    - `docker-compose run app sh -c "python manage.py test"`
+### Recipe - Folder and Files
 
-- In `app/core/tests/test_models.py`
+[Go Back to Contents](#contents)
 
-  - Import the **TestCase** from `django.test`
-  - Bellow that we are going to import the `get_user_model` helper function to import our models. This is recommended because if we change our user model we will need to change all the tests that uses that model
-  - Manually managing a user’s password
-    - If you’d like to manually authenticate a user by comparing a plain-text password to the hashed password in the database, use the convenience function [check_password()](https://docs.djangoproject.com/en/3.1/topics/auth/passwords/#module-django.contrib.auth.hashers). It takes two arguments: the plain-text password to check, and the full value of a user’s password field in the database to check against, and returns True if they match, False otherwise.
+- Create folder and files, and remove files
 
-  ```Python
-    from django.test import TestCase
-    from django.contrib.auth import get_user_model
-
-
-    class ModelTests(TestCase):
-        def test_create_user_with_email_successful(self):
-            """Test creating a new user with an email is successful"""
-            email = 'test@test.com'
-            password = 'Test123'
-            user = get_user_model().objects.create_user(
-                email=email,
-                password=password
-            )
-            self.assertEqual(user.email, email)
-            self.assertTrue(user.check_password(password))
-
-        def test_new_user_email_normalized(self):
-            """Test the email for a new user is normalized"""
-            email = 'test@TEST.COM'
-            user = get_user_model().objects.create_user(email, 'Test123')
-            self.assertEqual(user.email, email.lower())
-
-        def test_new_user_invalid_email(self):
-            """Test creating user with no email raises error"""
-            with self.assertRaises(ValueError):
-                get_user_model().objects.create_user(None, 'Tes123')
-
-        def test_create_new_superuser(self):
-            """Test creating a new superuser"""
-            email = 'test@test.com'
-            password = 'Test123'
-            user = get_user_model().objects.create_superuser(email, password)
-            self.assertTrue(user.is_superuser)
-            self.assertTrue(user.is_staff)
+  ```Bash
+    touch app/recipe/serializer.py + urls.py + test/__init__.py + test_tags.py
   ```
 
-- In `app/core/tests/test_admin.py`
+- Delete `migrations folder`, `admin.py`, `models.py`, and `test.py`
 
-  - Import **[Client](https://docs.djangoproject.com/en/2.2/topics/testing/tools/#overview-and-a-quick-example)** from `django.test`
-    - Client allows us to make test requests to our application
-  - Import **[reverse](https://docs.djangoproject.com/en/3.1/ref/contrib/admin/)** from `django.urls`
-    - reverse allows us to generate urls for our admin page
+  ```Bash
+    .
+    ├── test
+    │   ├── __init__.py
+    │   └── test_tags.py
+    ├── __init__.py
+    ├── apps.py
+    ├── serializers.py
+    └── views.py
+  ```
+
+### Recipe - Register a New App
+
+[Go Back to Contents](#contents)
+
+- in `app/config/settings.py`
+
+  ```Bash
+    INSTALLED_APPS = [
+        'core',
+        'user',
+        'recipe',
+        'rest_framework',
+        'rest_framework.authtoken',
+        'django.contrib.admin',
+        'django.contrib.auth',
+        'django.contrib.contenttypes',
+        'django.contrib.sessions',
+        'django.contrib.messages',
+        'django.contrib.staticfiles',
+    ]
+  ```
+
+### Recipe - Update the Models
+
+[Go Back to Contents](#contents)
+
+- in `app/core/models.py`
+
+  - Import **settings** from `django.conf`
+
+    - [ForeignKey.swappable](https://docs.djangoproject.com/en/3.1/ref/models/fields/#django.db.models.ForeignKey.swappable)
+
+      - Controls the migration framework’s reaction if this ForeignKey is pointing at a swappable model. If it is `True` - the default - then if the ForeignKey is pointing at a model which matches the current value of **settings.AUTH_USER_MODEL** (or another swappable model setting) the relationship will be stored in the migration using a reference to the setting, not to the model directly.
+
+      - You only want to override this to be `False` if you are sure your model should always point towards the swapped-in model - for example, if it is a profile model designed specifically for your custom user model.
+
+  - Create a new **Recipe** class
+
+    - [Model instance methods](https://docs.djangoproject.com/en/3.1/ref/models/instances/#other-model-instance-methods)
+    - \***\*str**()** - The `__str__()` method is called whenever you call **str()** on an object. Django uses **str(obj)\*\* in a number of places. Most notably, to display an object in the Django admin site and as the value inserted into a template when it displays an object. Thus, you should always return a nice, human-readable representation of the model from the `__str__()` method.
+
+    ```Python
+      from django.conf import settings
+      # Import settings, best practice to retrive the AUTH_USER_MODEL
+      # We could acess directly
+      # This is the recomended way to retrive different settings from
+      # the settings.py
+
+      ...
+
+      class Tag(models.Model):
+      """Tag to be used for a recipe"""
+      name = models.CharField(max_length=255)
+      user = models.ForeignKey(
+          settings.AUTH_USER_MODEL,
+          on_delete=models.CASCADE
+      )
+
+      def __str__(self):
+          return self.name
+    ```
+
+#### Recipe - Migrations
+
+[Go Back to Contents](#contents)
+
+- On `Terminal`
+
+  - After updating the models, make migrations to apply the modifications
+
+    ```Bash
+      docker-compose run --rm app sh -c "python manage.py makemigrations"
+      docker-compose run --rm app sh -c "python manage.py migrate"
+    ```
+
+### Recipe - Register App Admin Panel
+
+[Go Back to Contents](#contents)
+
+- in `app/core/admin.py`
 
   ```Python
-    from django.test import TestCase, Client
+    from django.contrib import admin
+    from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+    from django.utils.translation import gettext as _
+    from core import models
+
+
+    class UserAdmin(BaseUserAdmin):
+        ...
+
+
+    admin.site.register(models.User, UserAdmin)
+    admin.site.register(models.Tag)
+  ```
+
+### Recipe - Tag Tests
+
+- in `app/recipe/test/test_tags.py`
+
+  ```Python
     from django.contrib.auth import get_user_model
+    from django.test import TestCase
     from django.urls import reverse
+    from rest_framework import status
+    from rest_framework.test import APIClient
+    from core.models import Tag
+    from recipe.serializers import TagSerializer
+
+    TAGS_URL = reverse('recipe:tag-list')
 
 
-    class AdminSiteTests(TestCase):
+    class PublicTagsApiTests(TestCase):
+        """Test the public available tags API"""
+
         def setUp(self):
-            """setUp function that runs before each test"""
-            # ! Add a client variable set to the Client(). So though self
-            # ! we can have access to this variable
-            self.client = Client()
-            # ! create a new superuser and set to admin_user
-            self.admin_user = get_user_model().objects.create_superuser(
-                email='admin@test.com',
-                password='password123'
-            )
-            # + uses the client helper function (force_login) to login the user
-            # + with django authentication
-            self.client.force_login(self.admin_user)
-            # ! create a normal user
-            self.user = get_user_model().objects.create_user(
-                email='noral_user@test.com',
-                password='password123',
-                name='Normal user full name'
-            )
+            self.client = APIClient()
 
-        def test_users_listed(self):
-            """TEst that users are listed on user page"""
-            # {{ app_label }}_{{ model_name }}_changelist, django docs
-            # this method will dynamically generate the url for our admin page
-            # so we don't need to hard code
-            url = reverse('admin:core_user_changelist')
-            res = self.client.get(url)
-            self.assertContains(res, self.user.name)
-            self.assertContains(res, self.user.email)
+        def test_login_required(self):
+            """Test that login is required for retrieving tags"""
+            res = self.client.get(TAGS_URL)
+            self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
-        def test_user_change_page(self):
-            """Test that the user edit page works"""
-            # ! url = /admin/core/user/1
-            url = reverse('admin:core_user_change', args=[self.user.id])
-            res = self.client.get(url)
-            self.assertEqual(res.status_code, 200)
 
-        def test_create_user_page(self):
-            """Test that create user page works"""
-            url = reverse('admin:core_user_add')
-            res = self.client.get(url)
-            self.assertEqual(res.status_code, 200)
+    class PrivateTagsApiTests(TestCase):
+        """Test the authorized user tags API"""
+
+        def setUp(self):
+            self.user = get_user_model().objects.create_user('test@test.com',
+                                                            'password123')
+            self.client = APIClient()
+            self.client.force_authenticate(self.user)
+
+        def test_retrive_tags(self):
+            """Test retrieving tags"""
+            Tag.objects.create(user=self.user, name="Vegan")
+            Tag.objects.create(user=self.user, name="Dessert")
+            res = self.client.get(TAGS_URL)
+            tags = Tag.objects.all().order_by('-name')
+            serializer = TagSerializer(tags, many=True)
+            # + We are serializing the data, and passing many=True
+            # + many=True means to serialize the multiple items
+            # + Othewise it will serialize only one item
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(res.data, serializer.data)
+
+        def test_tags_limited_to_user(self):
+            """Test that tags returned are for the authenticated user"""
+            user2 = get_user_model().objects.create_user('test2@test.com',
+                                                        'password123')
+            Tag.objects.create(user=user2, name="Fruity")
+            tag = Tag.objects.create(user=user2, name="Comfort Food")
+
+            res = self.client.get(TAGS_URL)
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(len(res.data), 1)
+            self.assertEqual(res.data[0]['name'], tag.name)
   ```
 
-### Mocking
+### Recipe - Serializer
 
 [Go Back to Contents](#contents)
 
-- Change the behavior of dependencies
-- Avoids unintended side-effects
-- Never depend on external services
+- in `app/recipe/serializers.py`
 
-  - Can't guarantee they will be available
-  - Make tests unpredictable/unreliable
+  - The [ModelSerializer](https://www.django-rest-framework.org/api-guide/serializers/#modelserializer) class provides a shortcut that lets you automatically create a `Serializer` class with fields that correspond to the Model fields.
+  - The **ModelSerializer** class is the same as a regular **Serializer** class, except that:
 
-- [Mocking](https://docs.python.org/3/library/unittest.mock.html)
-- `unittest.mock` is a library for testing in Python. It allows you to replace parts of your system under test with mock objects and make assertions about how they have been used.
-- `unittest.mock` provides a core Mock class removing the need to create a host of stubs throughout your test suite. After performing an action, you can make assertions about which methods / attributes were used and arguments they were called with. You can also specify return values and set needed attributes in the normal way.
-
-#### Patch()
-
-[Go Back to Contents](#contents)
-
-- Additionally, mock provides a `patch()` decorator that handles patching module and class level attributes within the scope of a test, along with sentinel for creating unique objects.
-- The patch decorators are used for patching objects only within the scope of the function they decorate. They automatically handle the unpatching for you, even if exceptions are raised. All of these functions can also be used in with statements or as class decorators.
-
-### Management Commands
-
-[Go Back to Contents](#contents)
-
-- [django.core.management](https://docs.djangoproject.com/en/3.1/howto/custom-management-commands/#module-django.core.management)
-- [django.core.management.call_command](https://docs.djangoproject.com/en/3.1/ref/django-admin/#django.core.management.call_command)
-- [Django Unittest Wait for Database](https://stackoverflow.com/questions/52621819/django-unit-test-wait-for-database)
-- Running management commands inside our source code
+    - It will automatically generate a set of fields for you, based on the model.
+    - It will automatically generate validators for the serializer, such as unique_together validators.
+    - It includes simple default implementations of `.create()` and `.update()`.
 
   ```Python
-    django.core.management.call_command(name, *args, **options)
+    from rest_framework import serializers
+    from core.models import Tag
+
+
+    class TagSerializer(serializers.ModelSerializer):
+        """Serializer for tag objects"""
+        class Meta:
+            model = Tag
+            fields = ('id', 'name')
+            read_only_fields = ('id',)
   ```
 
-- To call a management command from code use `call_command`.
+### Recipe - Views
 
-- **name**
-  - the name of the command to call or a command object. Passing the name is preferred unless the object is required for testing.
-- **\*args**
-  - a list of arguments accepted by the command. Arguments are passed to the argument parser, so you can use the same style as you would on the command line. For example, **call_command('flush', '--verbosity=0')**.
-- **\*\*options**
+[Go Back to Contents](#contents)
 
-  - named options accepted on the command-line. Options are passed to the command without triggering the argument parser, which means you’ll need to pass the correct type. For example, **call_command('flush', verbosity=0)** (zero must be an integer rather than a string).
+- in `app/recipe/views.py`
 
-- Some command options have different names when using `call_command()` instead of **django-admin** or **manage.py**. For example, `django-admin createsuperuser --no-input` translates to `call_command('createsuperuser', interactive=False)`. To find what keyword argument name to use for `call_command()`, check the command’s source code for the dest argument passed to `parser.add_argument()`.
+  - **[ViewSet](https://www.django-rest-framework.org/api-guide/viewsets/#viewset)**
 
-- in `app/core/tests/test_commands.py`
+    - The `ViewSet` class inherits from `APIView`. You can use any of the standard attributes such as `permission_classes`, `authentication_classes` in order to control the API policy on the viewset.
+    - The `ViewSet` class does not provide any implementations of actions. In order to use a `ViewSet` class you'll override the class and define the action implementations explicitly.
+    - **[GenericViewSet](https://www.django-rest-framework.org/api-guide/viewsets/#genericviewset)**
+
+      - The `GenericViewSet` class inherits from `GenericAPIView`, and provides the default set of `get_object`, `get_queryset` methods and other generic view base behavior, but does not include any actions by default.
+      - In order to use a `GenericViewSet` class you'll override the class and either mixin the required mixin classes, or define the action implementations explicitly.
+
+    - **[ModelViewSet](https://www.django-rest-framework.org/api-guide/viewsets/#modelviewset)**
+      - The `ModelViewSet` class inherits from `GenericAPIView` and includes implementations for various actions, by mixing in the behavior of the various mixin classes.
+      - The actions provided by the `ModelViewSet` class are `.list()`, `.retrieve()`, `.create()`, `.update()`, `.partial_update()`, and `.destroy()`.
+
+  - **[Mixins](https://www.django-rest-framework.org/api-guide/generic-views/#mixins)**
+
+    - The mixin classes provide the actions that are used to provide the basic view behavior. Note that the mixin classes provide action methods rather than defining the handler methods, such as .`get()` and `.post()`, directly. This allows for more flexible composition of behavior.
+    - **ListModelMixin**
+      - Provides a `.list(request, *args, **kwargs)` method, that implements listing a queryset.
+      - If the queryset is populated, this returns a `200 OK` response, with a serialized representation of the queryset as the body of the response. The response data may optionally be paginated.
+
+  - **[Custom ViewSet base classes](https://www.django-rest-framework.org/api-guide/viewsets/#custom-viewset-base-classes)**
+
+    - You may need to provide custom `ViewSet` classes that do not have the full set of `ModelViewSet` actions, or that customize the behavior in some other way.
+    - Example:
+
+      - To create a base viewset class that provides **create**, **list** and **retrieve** operations, inherit from `GenericViewSet`, and mixin the required actions:
+
+        ```Python
+          from rest_framework import mixins
+
+          class CreateListRetrieveViewSet(mixins.CreateModelMixin,
+                                          mixins.ListModelMixin,
+                                          mixins.RetrieveModelMixin,
+                                          viewsets.GenericViewSet):
+              """
+              A viewset that provides `retrieve`, `create`, and `list` actions.
+
+              To use it, override the class and set the `.queryset` and
+              `.serializer_class` attributes.
+              """
+              pass
+        ```
 
   ```Python
-    from unittest.mock import patch
-    from django.core.management import call_command
-    from django.db.utils import OperationalError
+    from rest_framework import viewsets, mixins
+    # Import GenericViewSet and Mixins
+    from rest_framework.authentication import TokenAuthentication
+    from rest_framework.permissions import IsAuthenticated
+    from core.models import Tag
+    from recipe import serializers
+
+
+    class TagViewSet(viewsets.GenericViewSet,
+                     mixins.ListModelMixin,
+                     mixins.CreateModelMixin):
+        # + ListModelMixin adds the option to list the items
+        # + CreateModelMixing adds the option to create  an item
+        """Manage tags in the database"""
+        authentication_classes = (TokenAuthentication,)
+        permission_classes = (IsAuthenticated,)
+        queryset = Tag.objects.all()
+        serializer_class = serializers.TagSerializer
+
+        # + Overrite the get_queryset - ListModelMixins
+        def get_queryset(self):
+            """Return objects for the current authenticated user only"""
+            return self.queryset.filter(user=self.request.user).order_by('-name')
+            # referencing the queryset above
+
+        # + Overrite the perform_create - ListModelMixins
+        def perform_create(self, serializer):
+            """Create a new tag"""
+            serializer.save(user=self.request.user)
+            # - we set the user to the authenticated user
+            # - use the serializer to format properly and save
+  ```
+
+### Recipe - Urls
+
+[Go Back to Contents](#contents)
+
+- in `app/recipe/urls.py`
+
+  ```Python
+    from django.urls import path, include
+    from rest_framework.routers import DefaultRouter
+    from recipe import views
+
+    app_name = 'recipe'
+
+    router = DefaultRouter()
+    router.register('tags', views.TagViewSet)
+
+    urlpatterns = [
+        path('', include(router.urls))
+    ]
+  ```
+
+### Register Recipe Base Url
+
+[Go Back to Contents](#contents)
+
+- in `app/config/urls.py`
+
+  ```Python
+    from django.contrib import admin
+    from django.urls import path, include
+
+    urlpatterns = [
+        path('admin/', admin.site.urls),
+        path('api/user/', include('user.urls')),
+        path('api/recipe/', include('recipe.urls')),
+    ]
+  ```
+
+### Recipe - Tests
+
+[Go Back to Contents](#contents)
+
+- in `app/recipe/test/test_tags.py`
+
+  ```Python
+    from django.contrib.auth import get_user_model
     from django.test import TestCase
+    from django.urls import reverse
+    from rest_framework import status
+    from rest_framework.test import APIClient
+    from core.models import Tag
+    from recipe.serializers import TagSerializer
+
+    TAGS_URL = reverse('recipe:tag-list')
 
 
-    class CommandTests(TestCase):
-        def test_wait_for_db_ready(self):
-            """Test waiting for db when db is available"""
-            with patch('django.db.utils.ConnectionHandler.__getitem__') as gi:
-                # + The way we test if the database is available in Django is using
-                # + django.db.utils.ConnectionHandler, this will try to retreive
-                # + the default database __getitem__ is the function that
-                # + retrieves the database
-                gi.return_value = True
-                # + the patch() function returns a mock object where we have
-                # + two properties:
-                # -     return_value
-                # -     call_count
-                call_command('wait_for_db')
-                # + test our command with call_command
-                # + wait_for_db could be any name
-                self.assertEqual(gi.call_count, 1)
+    class PublicTagsApiTests(TestCase):
+        """Test the public available tags API"""
 
-        @patch('time.sleep', return_value=True)
-        # + When we use patch as a decorator
-        # + we can mock the return value as the second argument
-        def test_wait_for_db(self, ts):
-            # + we have to add a second argument even if we are not going to use it
-            # + if we don't do that it will give us an error
-            # - in this case we are mocking the timer, so we can speed up the test
-            """Test waiting for db"""
-            with patch('django.db.utils.ConnectionHandler.__getitem__') as gi:
-                gi.side_effect = [OperationalError] * 5 + [True]
-                # + the unittest.mock has side_effect method
-                # + we can apply to the function that we are mocking
-                # + this way we can force the function rase an error
-                call_command('wait_for_db')
-                self.assertEqual(gi.call_count, 6)
+        def setUp(self):
+            self.client = APIClient()
+
+        def test_login_required(self):
+            """Test that login is required for retrieving tags"""
+            res = self.client.get(TAGS_URL)
+            self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+    class PrivateTagsApiTests(TestCase):
+        """Test the authorized user tags API"""
+
+        def setUp(self):
+            self.user = get_user_model().objects.create_user(
+                'test@test.com',
+                'password123'
+            )
+            self.client = APIClient()
+            self.client.force_authenticate(self.user)
+
+        def test_retrive_tags(self):
+            """Test retrieving tags"""
+            Tag.objects.create(user=self.user, name="Vegan")
+            Tag.objects.create(user=self.user, name="Dessert")
+            res = self.client.get(TAGS_URL)
+            tags = Tag.objects.all().order_by('-name')
+            serializer = TagSerializer(tags, many=True)
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(res.data, serializer.data)
+
+        def test_tags_limited_to_user(self):
+            """Test that tags returned are for the authenticated user"""
+            user2 = get_user_model().objects.create_user(
+                'test2@test.com',
+                'password123'
+            )
+            Tag.objects.create(user=user2, name='Fruity')
+            tag = Tag.objects.create(user=self.user, name='Comfort Food')
+
+            res = self.client.get(TAGS_URL)
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(len(res.data), 1)
+            self.assertEqual(res.data[0]['name'], tag.name)
+
+        def test_create_tag_successful(self):
+            """Test creating a new tag"""
+            payload = {
+                "name": "Test Tag"
+            }
+            res = self.client.post(TAGS_URL, payload)
+            self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+            exists = Tag.objects.filter(
+                user=self.user,
+                name=payload['name']
+            ).exists()
+            self.assertTrue(exists)
+
+        def test_create_tag_invalid(self):
+            """Test creating a new tag with invalid payload"""
+            payload = {
+                "name": ""
+            }
+            res = self.client.post(TAGS_URL, payload)
+            self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
   ```
