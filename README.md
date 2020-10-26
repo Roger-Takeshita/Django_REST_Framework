@@ -35,29 +35,38 @@
         - [PATCH()](#patch)
         - [MANAGEMENT COMMANDS](#management-commands-1)
   - [User App](#user-app)
-    - [Create Folder and Files](#create-folder-and-files-1)
-    - [Register New App](#register-new-app)
-    - [User's APIs](#users-apis)
-      - [Serializers](#serializers)
-      - [View (Controllers)](#view-controllers)
-      - [Urls (Routes)](#urls-routes)
-      - [Project Urls](#project-urls)
-      - [Token Authentication](#token-authentication)
-      - [Manage User Endpoints](#manage-user-endpoints)
-      - [User - Tests](#user---tests)
+    - [User - Folder and Files](#user---folder-and-files)
+    - [User - Register New App](#user---register-new-app)
+    - [User - Serializers](#user---serializers)
+    - [User - View (Controllers)](#user---view-controllers)
+    - [User - Urls (Routes)](#user---urls-routes)
+    - [User - Register Base API Url](#user---register-base-api-url)
+    - [User - Token Authentication](#user---token-authentication)
+    - [User - Manage Endpoints](#user---manage-endpoints)
+    - [User - Tests](#user---tests)
   - [Recipe APP](#recipe-app)
-    - [Create a Recipe App](#create-a-recipe-app)
+    - [Recipe - Create New App](#recipe---create-new-app)
     - [Recipe - Folder and Files](#recipe---folder-and-files)
     - [Recipe - Register a New App](#recipe---register-a-new-app)
-    - [Recipe - Update the Models](#recipe---update-the-models)
-      - [Recipe - Migrations](#recipe---migrations)
-    - [Recipe - Register App Admin Panel](#recipe---register-app-admin-panel)
-    - [Recipe - Tag Tests](#recipe---tag-tests)
-    - [Recipe - Serializer](#recipe---serializer)
-    - [Recipe - Views](#recipe---views)
-    - [Recipe - Urls](#recipe---urls)
-    - [Register Recipe Base Url](#register-recipe-base-url)
-    - [Recipe - Tests](#recipe---tests)
+    - [Recipe - Register Base API Url](#recipe---register-base-api-url)
+    - [Tag](#tag)
+      - [Tag - Update the Models](#tag---update-the-models)
+      - [Tag - Migrations](#tag---migrations)
+      - [Tag - Register App Admin Panel](#tag---register-app-admin-panel)
+      - [Tag - Serializer](#tag---serializer)
+      - [Tag - Views](#tag---views)
+      - [Tag - Urls (Router)](#tag---urls-router)
+      - [Tag - Tests](#tag---tests)
+    - [Ingredient](#ingredient)
+      - [Ingredient - Folder and Files](#ingredient---folder-and-files)
+      - [Ingredient - Models](#ingredient---models)
+      - [Ingredient - Migrations](#ingredient---migrations)
+      - [Ingredient - Register App Admin Panel](#ingredient---register-app-admin-panel)
+      - [Ingredient - Serializer](#ingredient---serializer)
+      - [Ingredient - Views](#ingredient---views)
+      - [Ingredient - Urls (Router)](#ingredient---urls-router)
+      - [Ingredient - Test Models](#ingredient---test-models)
+      - [Ingredient - Test](#ingredient---test)
 
 # FOLDER AND FILES
 
@@ -1089,7 +1098,7 @@
     docker-compose run --rm app sh -c "python manage.py startapp user"
   ```
 
-### Create Folder and Files
+### User - Folder and Files
 
 [Go Back to Contents](#contents)
 
@@ -1114,7 +1123,7 @@
     touch app/user/tests/__init__.py + test_user_api.py app/user/urls.py + serializers.py
   ```
 
-### Register New App
+### User - Register New App
 
 [Go Back to Contents](#contents)
 
@@ -1138,9 +1147,7 @@
       ]
     ```
 
-### User's APIs
-
-#### Serializers
+### User - Serializers
 
 [Go Back to Contents](#contents)
 
@@ -1199,7 +1206,7 @@
             return get_user_model().objects.create_user(**validate_data)
   ```
 
-#### View (Controllers)
+### User - View (Controllers)
 
 [Go Back to Contents](#contents)
 
@@ -1221,7 +1228,7 @@
           # ! and point to the our Serializer
     ```
 
-#### Urls (Routes)
+### User - Urls (Routes)
 
 [Go Back to Contents](#contents)
 
@@ -1242,7 +1249,7 @@
     ]
   ```
 
-#### Project Urls
+### User - Register Base API Url
 
 [Go Back to Contents](#contents)
 
@@ -1261,7 +1268,7 @@
       ]
     ```
 
-#### Token Authentication
+### User - Token Authentication
 
 [Go Back to Contents](#contents)
 
@@ -1462,7 +1469,7 @@
 
         ![](https://i.imgur.com/rmxhyn4.png)
 
-#### Manage User Endpoints
+### User - Manage Endpoints
 
 [Go Back to Contents](#contents)
 
@@ -1576,7 +1583,7 @@
       ]
     ```
 
-#### User - Tests
+### User - Tests
 
 [Go Back to Contents](#contents)
 
@@ -1747,13 +1754,15 @@
 
 ## Recipe APP
 
-### Create a Recipe App
+### Recipe - Create New App
 
 [Go Back to Contents](#contents)
 
-```Bash
-  docker-compose run --rm app sh -c "python manage.py start recipe"
-```
+- On `Terminal`
+
+  ```Bash
+    docker-compose run --rm app sh -c "python manage.py start recipe"
+  ```
 
 ### Recipe - Folder and Files
 
@@ -1762,7 +1771,7 @@
 - Create folder and files, and remove files
 
   ```Bash
-    touch app/recipe/serializer.py + urls.py + test/__init__.py + test_tags.py
+    touch app/recipe/serializer.py + urls.py + tests/__init__.py + test_tags.py
   ```
 
 - Delete `migrations folder`, `admin.py`, `models.py`, and `test.py`
@@ -1800,7 +1809,26 @@
     ]
   ```
 
-### Recipe - Update the Models
+### Recipe - Register Base API Url
+
+[Go Back to Contents](#contents)
+
+- in `app/config/urls.py`
+
+  ```Python
+    from django.contrib import admin
+    from django.urls import path, include
+
+    urlpatterns = [
+        path('admin/', admin.site.urls),
+        path('api/user/', include('user.urls')),
+        path('api/recipe/', include('recipe.urls')),
+    ]
+  ```
+
+### Tag
+
+#### Tag - Update the Models
 
 [Go Back to Contents](#contents)
 
@@ -1814,7 +1842,7 @@
 
       - You only want to override this to be `False` if you are sure your model should always point towards the swapped-in model - for example, if it is a profile model designed specifically for your custom user model.
 
-  - Create a new **Recipe** class
+  - Create a new **Tag** class
 
     - [Model instance methods](https://docs.djangoproject.com/en/3.1/ref/models/instances/#other-model-instance-methods)
     - \***\*str**()** - The `__str__()` method is called whenever you call **str()** on an object. Django uses **str(obj)\*\* in a number of places. Most notably, to display an object in the Django admin site and as the value inserted into a template when it displays an object. Thus, you should always return a nice, human-readable representation of the model from the `__str__()` method.
@@ -1840,7 +1868,7 @@
           return self.name
     ```
 
-#### Recipe - Migrations
+#### Tag - Migrations
 
 [Go Back to Contents](#contents)
 
@@ -1853,7 +1881,7 @@
       docker-compose run --rm app sh -c "python manage.py migrate"
     ```
 
-### Recipe - Register App Admin Panel
+#### Tag - Register App Admin Panel
 
 [Go Back to Contents](#contents)
 
@@ -1874,70 +1902,7 @@
     admin.site.register(models.Tag)
   ```
 
-### Recipe - Tag Tests
-
-- in `app/recipe/test/test_tags.py`
-
-  ```Python
-    from django.contrib.auth import get_user_model
-    from django.test import TestCase
-    from django.urls import reverse
-    from rest_framework import status
-    from rest_framework.test import APIClient
-    from core.models import Tag
-    from recipe.serializers import TagSerializer
-
-    TAGS_URL = reverse('recipe:tag-list')
-
-
-    class PublicTagsApiTests(TestCase):
-        """Test the public available tags API"""
-
-        def setUp(self):
-            self.client = APIClient()
-
-        def test_login_required(self):
-            """Test that login is required for retrieving tags"""
-            res = self.client.get(TAGS_URL)
-            self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
-
-
-    class PrivateTagsApiTests(TestCase):
-        """Test the authorized user tags API"""
-
-        def setUp(self):
-            self.user = get_user_model().objects.create_user('test@test.com',
-                                                            'password123')
-            self.client = APIClient()
-            self.client.force_authenticate(self.user)
-
-        def test_retrive_tags(self):
-            """Test retrieving tags"""
-            Tag.objects.create(user=self.user, name="Vegan")
-            Tag.objects.create(user=self.user, name="Dessert")
-            res = self.client.get(TAGS_URL)
-            tags = Tag.objects.all().order_by('-name')
-            serializer = TagSerializer(tags, many=True)
-            # + We are serializing the data, and passing many=True
-            # + many=True means to serialize the multiple items
-            # + Othewise it will serialize only one item
-            self.assertEqual(res.status_code, status.HTTP_200_OK)
-            self.assertEqual(res.data, serializer.data)
-
-        def test_tags_limited_to_user(self):
-            """Test that tags returned are for the authenticated user"""
-            user2 = get_user_model().objects.create_user('test2@test.com',
-                                                        'password123')
-            Tag.objects.create(user=user2, name="Fruity")
-            tag = Tag.objects.create(user=user2, name="Comfort Food")
-
-            res = self.client.get(TAGS_URL)
-            self.assertEqual(res.status_code, status.HTTP_200_OK)
-            self.assertEqual(len(res.data), 1)
-            self.assertEqual(res.data[0]['name'], tag.name)
-  ```
-
-### Recipe - Serializer
+#### Tag - Serializer
 
 [Go Back to Contents](#contents)
 
@@ -1963,7 +1928,7 @@
             read_only_fields = ('id',)
   ```
 
-### Recipe - Views
+#### Tag - Views
 
 [Go Back to Contents](#contents)
 
@@ -2046,7 +2011,7 @@
             # - use the serializer to format properly and save
   ```
 
-### Recipe - Urls
+#### Tag - Urls (Router)
 
 [Go Back to Contents](#contents)
 
@@ -2067,24 +2032,7 @@
     ]
   ```
 
-### Register Recipe Base Url
-
-[Go Back to Contents](#contents)
-
-- in `app/config/urls.py`
-
-  ```Python
-    from django.contrib import admin
-    from django.urls import path, include
-
-    urlpatterns = [
-        path('admin/', admin.site.urls),
-        path('api/user/', include('user.urls')),
-        path('api/recipe/', include('recipe.urls')),
-    ]
-  ```
-
-### Recipe - Tests
+#### Tag - Tests
 
 [Go Back to Contents](#contents)
 
@@ -2169,4 +2117,243 @@
             }
             res = self.client.post(TAGS_URL, payload)
             self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+  ```
+
+### Ingredient
+
+#### Ingredient - Folder and Files
+
+[Go Back to Contents](#contents)
+
+- Create the following file
+
+  ```Bash
+    touch app/recipe/tests/test_ingredients.py
+  ```
+
+#### Ingredient - Models
+
+[Go Back to Contents](#contents)
+
+- in `app/core/models.py`
+
+  - Update the core model, add a new calss called **Ingredient**
+
+    ```Python
+      class Ingredient(models.Model):
+        """Ingredient to be used in a recipe"""
+        name = models.CharField(max_length=255)
+        user = models.ForeignKey(
+            settings.AUTH_USER_MODEL,
+            on_delete=models.CASCADE
+        )
+
+        def __str__(self):
+            return self.name
+    ```
+
+#### Ingredient - Migrations
+
+[Go Back to Contents](#contents)
+
+- On `Terminal`
+
+  - After updating the models, make migrations to apply the modifications
+
+    ```Bash
+      docker-compose run --rm app sh -c "python manage.py makemigrations"
+      docker-compose run --rm app sh -c "python manage.py migrate"
+    ```
+
+#### Ingredient - Register App Admin Panel
+
+[Go Back to Contents](#contents)
+
+- in `app/core/admin.py`
+
+  ```Python
+    from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+    from django.utils.translation import gettext as _
+    from core import models
+
+
+    class UserAdmin(BaseUserAdmin):
+        ...
+
+
+    admin.site.register(models.User, UserAdmin)
+    admin.site.register(models.Tag)
+    admin.site.register(models.Ingredient)
+  ```
+
+#### Ingredient - Serializer
+
+[Go Back to Contents](#contents)
+
+- in `app/recipe/serializers.py`
+
+  - Import our Ingredient model
+  - Add a new serializer
+
+    ```Python
+      from rest_framework import serializers
+      from core.models import Tag, Ingredient
+
+
+      class TagSerializer(serializers.ModelSerializer):
+          """Serializer for tag objects"""
+          class Meta:
+              model = Tag
+              fields = ('id', 'name')
+              read_only_fields = ('id',)
+
+
+      class IngredientSerializer(serializers.ModelSerializer):
+          """Serializer for ingredients objects"""
+          class Meta:
+              model = Ingredient
+              fields = ('id', 'name')
+              read_only_fields = ('id',)
+    ```
+
+#### Ingredient - Views
+
+[Go Back to Contents](#contents)
+
+- in `app/recipe/views.py`
+
+  - Import our Ingredient model
+  - Create a new ViewSet
+
+    ```Python
+      from rest_framework import viewsets, mixins
+      from rest_framework.authentication import TokenAuthentication
+      from rest_framework.permissions import IsAuthenticated
+      from core.models import Tag, Ingredient
+      from recipe import serializers
+
+
+      class TagViewSet(viewsets.GenericViewSet,
+                      mixins.ListModelMixin,
+                      mixins.CreateModelMixin):
+          ...
+
+
+      class IngredientViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
+          """Manage ingredients in the database"""
+          authentication_classes = (TokenAuthentication,)
+          permission_classes = (IsAuthenticated,)
+          queryset = Ingredient.objects.all()
+          serializer_class = serializers.IngredientSerializer
+
+          def get_queryset(self):
+              """Returns object for the current authenticated user only"""
+              return self.queryset.filter(user=self.request.user).order_by("-name")
+    ```
+
+#### Ingredient - Urls (Router)
+
+[Go Back to Contents](#contents)
+
+- in `app/recipe/urls.py`
+
+  - Add a new ViewSet router
+
+    ```Python
+      from django.urls import path, include
+      from rest_framework.routers import DefaultRouter
+      from recipe import views
+
+      app_name = 'recipe'
+
+      router = DefaultRouter()
+      router.register('tags', views.TagViewSet)
+      router.register('ingredients', views.IngredientViewSet)
+
+      urlpatterns = [
+          path('', include(router.urls))
+      ]
+    ```
+
+#### Ingredient - Test Models
+
+[Go Back to Contents](#contents)
+
+- in `app/core/tests/test_models.py`
+
+  - Add a new test to check the string representation of the model
+
+    ```Python
+      def test_ingredient_str(self):
+        """Test the ingredient string representation"""
+        ingredient = models.Ingredient.objects.create(
+            user=sample_user(),
+            name="Cucumber"
+        )
+        self.assertEqual(str(ingredient), ingredient.name)
+    ```
+
+#### Ingredient - Test
+
+[Go Back to Contents](#contents)
+
+- in `app/recipe/tests/test_ingredients.py`
+
+  ```Python
+    from django.contrib.auth import get_user_model
+    from django.urls import reverse
+    from django.test import TestCase
+    from rest_framework import status
+    from rest_framework.test import APIClient
+    from core.models import Ingredient
+    from recipe.serializers import IngredientSerializer
+
+    INGREDIENTS_URL = reverse('recipe:ingredient-list')
+
+
+    class PublicIngredientsApiTests(TestCase):
+        """Test the public available ingredients API"""
+
+        def setUp(self):
+            self.client = APIClient()
+
+        def test_login_required(self):
+            """Test that login is required to access the endpoing"""
+            res = self.client.get(INGREDIENTS_URL)
+            self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+    class PrivateIngredientsApiTests(TestCase):
+        """Test the private ingredients API"""
+
+        def setUp(self):
+            self.client = APIClient()
+            self.user = get_user_model().objects.create_user(
+                'test@test.com',
+                'password123'
+            )
+            self.client.force_authenticate(self.user)
+
+        def test_retrieve_ingredients_list(self):
+            """Test retriving a list of ingredients"""
+            Ingredient.objects.create(user=self.user, name="Kale")
+            Ingredient.objects.create(user=self.user, name="Salt")
+            res = self.client.get(INGREDIENTS_URL)
+            ingredients = Ingredient.objects.all().order_by("-name")
+            serializer = IngredientSerializer(ingredients, many=True)
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(res.data, serializer.data)
+
+        def test_ingredients_limited_to_user(self):
+            """Test that ingredients for the authenticated user are returned"""
+            user2 = get_user_model().objects.create_user(
+                "user2@test.com",
+                "password123"
+            )
+            Ingredient.objects.create(user=user2, name="Vinegar")
+            ingredient = Ingredient.objects.create(user=self.user, name="Tumeric")
+            res = self.client.get(INGREDIENTS_URL)
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(len(res.data), 1)
+            self.assertEqual(res.data[0]['name'], ingredient.name)
   ```
