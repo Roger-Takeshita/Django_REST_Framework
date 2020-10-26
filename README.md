@@ -67,6 +67,7 @@
       - [Ingredient - Urls (Router)](#ingredient---urls-router)
       - [Ingredient - Test Models](#ingredient---test-models)
       - [Ingredient - Test](#ingredient---test)
+    - [Recipe - REFACTOR View (Controller)](#recipe---refactor-view-controller)
 
 # FOLDER AND FILES
 
@@ -2239,7 +2240,9 @@
           ...
 
 
-      class IngredientViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
+      class IngredientViewSet(viewsets.GenericViewSet,
+                          mixins.ListModelMixin,
+                          mixins.CreateModelMixin):
           """Manage ingredients in the database"""
           authentication_classes = (TokenAuthentication,)
           permission_classes = (IsAuthenticated,)
@@ -2249,6 +2252,10 @@
           def get_queryset(self):
               """Returns object for the current authenticated user only"""
               return self.queryset.filter(user=self.request.user).order_by("-name")
+
+          def perform_create(self, serializers):
+              """Create a new ingredient"""
+              serializers.save(user=self.request.user)
     ```
 
 #### Ingredient - Urls (Router)
@@ -2356,4 +2363,71 @@
             self.assertEqual(res.status_code, status.HTTP_200_OK)
             self.assertEqual(len(res.data), 1)
             self.assertEqual(res.data[0]['name'], ingredient.name)
+
+        def test_create_ingredient_successful(self):
+            """Test create a new ingredient"""
+            payload = {
+                "name": "Cabbage"
+            }
+            res = self.client.post(INGREDIENTS_URL, payload)
+            self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+            exists = Ingredient.objects.filter(
+                user=self.user,
+                name=payload['name']
+            ).exists()
+            self.assertTrue(exists)
+
+        def test_create_ingredient_invalid(self):
+            """Test creating invalid ingredient fails"""
+            payload = {
+                "name": ""
+            }
+            res = self.client.post(INGREDIENTS_URL, payload)
+            self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
   ```
+
+### Recipe - REFACTOR View (Controller)
+
+[Go Back to Contents](#contents)
+
+- in `app/recipe/views.py`
+
+  - Let's refactor our ViewSets to dry the code
+  - We can create our **BaseRecipeViewSet**
+
+    ```Python
+      from rest_framework import viewsets, mixins
+      from rest_framework.authentication import TokenAuthentication
+      from rest_framework.permissions import IsAuthenticated
+      from core.models import Tag, Ingredient
+      from recipe import serializers
+
+
+      class BaseRecipeViewSet(viewsets.GenericViewSet,
+                              mixins.ListModelMixin,
+                              mixins.CreateModelMixin):
+          """Base ViewSet for user owned recipe attributes"""
+          authentication_classes = (TokenAuthentication,)
+          permission_classes = (IsAuthenticated,)
+
+          def get_queryset(self):
+              """Return object for the authenticated user only"""
+              return self.queryset.filter(user=self.request.user).order_by("-name")
+
+          def perform_create(self, serializer):
+              """Create a new object"""
+              serializer.save(user=self.request.user)
+
+
+      class TagViewSet(BaseRecipeViewSet):
+          """Manage tags in the database"""
+          queryset = Tag.objects.all()
+          serializer_class = serializers.TagSerializer
+
+
+      class IngredientViewSet(BaseRecipeViewSet):
+          """Manage ingredients in the database"""
+          queryset = Ingredient.objects.all()
+          serializer_class = serializers.IngredientSerializer
+    ```
