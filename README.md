@@ -50,12 +50,13 @@
     - [Recipe - Register a New App](#recipe---register-a-new-app)
     - [Recipe - Register Base API Url](#recipe---register-base-api-url)
     - [Tag](#tag)
-      - [Tag - Update the Models](#tag---update-the-models)
+      - [Tag - Models](#tag---models)
       - [Tag - Migrations](#tag---migrations)
       - [Tag - Register App Admin Panel](#tag---register-app-admin-panel)
       - [Tag - Serializer](#tag---serializer)
       - [Tag - Views](#tag---views)
       - [Tag - Urls (Router)](#tag---urls-router)
+      - [Tag - Test Model](#tag---test-model)
       - [Tag - Tests](#tag---tests)
     - [Ingredient](#ingredient)
       - [Ingredient - Folder and Files](#ingredient---folder-and-files)
@@ -68,6 +69,11 @@
       - [Ingredient - Test Models](#ingredient---test-models)
       - [Ingredient - Test](#ingredient---test)
     - [Recipe - REFACTOR View (Controller)](#recipe---refactor-view-controller)
+    - [Recipe](#recipe)
+      - [Recipe - Model](#recipe---model)
+      - [Recipe - Migrations](#recipe---migrations)
+      - [Recipe - Register App Admin Panel](#recipe---register-app-admin-panel)
+      - [Recipe - Test Models](#recipe---test-models)
 
 # FOLDER AND FILES
 
@@ -1829,7 +1835,7 @@
 
 ### Tag
 
-#### Tag - Update the Models
+#### Tag - Models
 
 [Go Back to Contents](#contents)
 
@@ -2032,6 +2038,24 @@
         path('', include(router.urls))
     ]
   ```
+
+#### Tag - Test Model
+
+[Go Back to Contents](#contents)
+
+- in `app/core/tests/test_models.py`
+
+  - Add a new test to check the string representattion of the **Tag Model**
+
+    ```Python
+      def test_tag_str(self):
+        """Test the tag string representation"""
+        tag = models.Tag.objects.create(
+            user=sample_user(),
+            name="Vegan"
+        )
+        self.assertEqual(str(tag), tag.name)
+    ```
 
 #### Tag - Tests
 
@@ -2288,7 +2312,7 @@
 
 - in `app/core/tests/test_models.py`
 
-  - Add a new test to check the string representation of the model
+  - Add a new test to check the string representation of the **Ingredient Model**
 
     ```Python
       def test_ingredient_str(self):
@@ -2430,4 +2454,92 @@
           """Manage ingredients in the database"""
           queryset = Ingredient.objects.all()
           serializer_class = serializers.IngredientSerializer
+    ```
+
+### Recipe
+
+#### Recipe - Model
+
+[Go Back to Contents](#contents)
+
+- in `app/core/models.py`
+
+  - Add a Recipe Model
+
+    - [ManyToManyField](https://docs.djangoproject.com/en/3.1/ref/models/fields/#manytomanyfield)
+      - we pass the argument as string, this way we don't need to worry about the order of the classes. Otherwise, we need to declare first `ngredient` and `Tag` before the `Recipe` class
+    - `blank=True` this means that this field is optional and the default value is an empty string. If we set to `null` we have to check if is `not null` and if is `not empty string`
+
+    ```Python
+      class Recipe(models.Model):
+        """Recipe object"""
+        user = models.ForeignKey(
+            settings.AUTH_USER_MODEL,
+            on_delete=models.CASCADE
+        )
+        title = models.CharField(max_length=255)
+        time_minutes = models.IntegerField()
+        price = models.DecimalField(max_digits=5, decimal_places=2)
+        link = models.CharField(max_length=255, blank=True)
+        ingredients = models.ManyToManyField('Ingredient')
+        tags = models.ManyToManyField('Tag')
+
+        def __str__(self):
+            return self.title
+    ```
+
+#### Recipe - Migrations
+
+[Go Back to Contents](#contents)
+
+- On `Terminal`
+
+  - After updating the models, make migrations to apply the modifications
+
+    ```Bash
+      docker-compose run --rm app sh -c "python manage.py makemigrations"
+      docker-compose run --rm app sh -c "python manage.py migrate"
+    ```
+
+#### Recipe - Register App Admin Panel
+
+[Go Back to Contents](#contents)
+
+- in `app/core/admin.py`
+
+  ```Python
+    from django.contrib import admin
+    from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+    from django.utils.translation import gettext as _
+    from core import models
+
+
+    class UserAdmin(BaseUserAdmin):
+        ...
+
+
+    admin.site.register(models.User, UserAdmin)
+    admin.site.register(models.Tag)
+    admin.site.register(models.Ingredient)
+    admin.site.register(models.Recipe)
+  ```
+
+#### Recipe - Test Models
+
+[Go Back to Contents](#contents)
+
+- in `app/core/tests/test_models.py`
+
+  - Add a new test to check the string representation of the **Recipe Model**
+
+    ```Python
+      def test_recipe_str(self):
+          """Test the recipe string representation"""
+          recipe = models.Recipe.objects.create(
+              user=sample_user(),
+              title='Stake and mushroom and sauce',
+              time_minutes=5,
+              price=5.00
+          )
+          self.assertEqual(str(recipe), recipe.title)
     ```
