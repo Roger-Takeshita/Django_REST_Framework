@@ -2609,6 +2609,7 @@
     - Get all recipes
     - Get one recipe
       - With this option, the user will received the whole recipe with ManyToMany fields populated with their information
+    - Override the **perform_create** to use the authenticated user to create a new recipe
 
     ```Python
       from rest_framework import viewsets, mixins
@@ -2631,37 +2632,32 @@
 
 
       class RecipeViewSet(viewsets.ModelViewSet):
-      """Manage recipes in the database"""
-      serializer_class = serializers.RecipeSerializer
-      queryset = Recipe.objects.all()
-      authentication_classes = (TokenAuthentication,)
-      permission_classes = (IsAuthenticated,)
+          """Manage recipes in the database"""
+          serializer_class = serializers.RecipeSerializer
+          queryset = Recipe.objects.all()
+          authentication_classes = (TokenAuthentication,)
+          permission_classes = (IsAuthenticated,)
 
-      def get_queryset(self):
-          """Retrieve the recipes for the authenticated user"""
-          return self.queryset.filter(user=self.request.user)
+          def get_queryset(self):
+              """Retrieve the recipes for the authenticated user"""
+              return self.queryset.filter(user=self.request.user)
 
-      def class RecipeViewSet(viewsets.ModelViewSet):
-    """Manage recipes in the database"""
-    serializer_class = serializers.RecipeSerializer
-    queryset = Recipe.objects.all()
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+          def get_serializer_class(self):
+              # + override the get_serializer_class to handle different
+              # + requests (get 1 item or get all items)
+              # + # https://www.django-rest-framework.org/api-guide/generic-views/#get_serializer_classself
+              """Return appropriate serializer class"""
+              if self.action == 'retrieve':
+                  # + we user self.action to check the type of the request
+                  # + 'retrieve' means 1 recipe
+                  return serializers.RecipeDetailSerializer
+              return self.serializer_class(self):
 
-    def get_queryset(self):
-        """Retrieve the recipes for the authenticated user"""
-        return self.queryset.filter(user=self.request.user)
-
-    def get_serializer_class(self):
-        # + override the get_serializer_class to handle different
-        # + requests (get 1 item or get all items)
-        # + # https://www.django-rest-framework.org/api-guide/generic-views/#get_serializer_classself
-        """Return appropriate serializer class"""
-        if self.action == 'retrieve':
-            # + we user self.action to check the type of the request
-            # + 'retrieve' means 1 recipe
-            return serializers.RecipeDetailSerializer
-        return self.serializer_class(self):
+          def perform_create(self, serializer):
+              # + override the create funtion to use our authenticated user
+              # + to create new recipes
+              """Create a new recipe"""
+              serializer.save(user=self.request.user)
     ```
 
 #### Recipe - Urls (Router)
@@ -2787,4 +2783,76 @@
             self.assertEqual(res.status_code, status.HTTP_200_OK)
             self.assertEqual(len(res.data), 1)
             self.assertEqual(res.data, serializer.data)
+
+        def test_view_recipe_detail(self):
+            """Test viewing a recipe detail"""
+            recipe = sample_recipe(user=self.user)
+            recipe.tags.add(sample_tag(user=self.user))
+            recipe.ingredients.add(sample_ingredient(user=self.user))
+            # + Add a tag and ingredient to a many to many field
+            # + first we get the main object (recipe), then we add
+            # + a tag/ingredient
+            url = detail_url(recipe.id)
+            res = self.client.get(url)
+            serializer = RecipeDetailSerializer(recipe)
+            # + We are serializering only one object, that why we don't need to
+            # + add many=True
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(res.data, serializer.data)
+
+        def test_create_basic_recipe(self):
+            """Test creating recipe"""
+            payload = {
+                'title': 'Chocolate chessecake',
+                'time_minutes': 30,
+                'price': 5.00
+            }
+            res = self.client.post(RECIPES_URL, payload)
+            self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+            recipe = Recipe.objects.get(id=res.data['id'])
+            for key in payload.keys():
+                self.assertEqual(payload[key], getattr(recipe, key))
+                # we need to loop through the recipe response to check
+                # if the fields are correct
+                # getattr() is a helper funcion builtin Python to check
+                # if the property exists, if yes return the value
+                # https://docs.python.org/3/library/functions.html#getattr
+
+        def test_create_recipe_with_tags(self):
+            """Test creating a recipe with tags"""
+            tag1 = sample_tag(user=self.user, name="Veggan")
+            tag2 = sample_tag(user=self.user, name="Dessert")
+            payload = {
+                'title': 'Avocado lime cheesecake',
+                'tags': [tag1.id, tag2.id],
+                'time_minutes': 60,
+                'price': 20.00
+            }
+            res = self.client.post(RECIPES_URL, payload)
+            self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+            recipe = Recipe.objects.get(id=res.data['id'])
+            # get a specific recipe by id
+            tags = recipe.tags.all()
+            # returns all the tags associated to this recipe
+            self.assertEqual(tags.count(), 2)
+            self.assertIn(tag1, tags)
+            self.assertIn(tag2, tags)
+
+        def test_create_recipe_with_ingredients(self):
+            """Test creating a recipe with ingredients"""
+            ingredient1 = sample_ingredient(user=self.user, name='Prawns')
+            ingredient2 = sample_ingredient(user=self.user, name='Ginger')
+            payload = {
+                'title': 'Thai prawn red curry',
+                'ingredients': [ingredient1.id, ingredient2.id],
+                'time_minutes': 20,
+                'price': 7.00
+            }
+            res = self.client.post(RECIPES_URL, payload)
+            self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+            recipe = Recipe.objects.get(id=res.data['id'])
+            ingredients = recipe.ingredients.all()
+            self.assertEqual(ingredients.count(), 2)
+            self.assertIn(ingredient1, ingredients)
+            self.assertIn(ingredient2, ingredients)
   ```
