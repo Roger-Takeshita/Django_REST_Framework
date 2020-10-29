@@ -70,10 +70,15 @@
       - [Ingredient - Test](#ingredient---test)
     - [Recipe - REFACTOR View (Controller)](#recipe---refactor-view-controller)
     - [Recipe](#recipe)
+      - [Recipe - Folder and Files](#recipe---folder-and-files-1)
       - [Recipe - Model](#recipe---model)
       - [Recipe - Migrations](#recipe---migrations)
       - [Recipe - Register App Admin Panel](#recipe---register-app-admin-panel)
+      - [Recipe - Serializer](#recipe---serializer)
+      - [Recipe - Views (Controllers)](#recipe---views-controllers)
+      - [Recipe - Urls (Router)](#recipe---urls-router)
       - [Recipe - Test Models](#recipe---test-models)
+      - [Recipe - Test](#recipe---test)
 
 # FOLDER AND FILES
 
@@ -1778,7 +1783,7 @@
 - Create folder and files, and remove files
 
   ```Bash
-    touch app/recipe/serializer.py + urls.py + tests/__init__.py + test_tags.py
+    touch app/recipe/serializer.py + urls.py + tests/__init__.py + test_tags_api.py
   ```
 
 - Delete `migrations folder`, `admin.py`, `models.py`, and `test.py`
@@ -1787,7 +1792,7 @@
     .
     ├── test
     │   ├── __init__.py
-    │   └── test_tags.py
+    │   └── test_tags_api.py
     ├── __init__.py
     ├── apps.py
     ├── serializers.py
@@ -2061,7 +2066,7 @@
 
 [Go Back to Contents](#contents)
 
-- in `app/recipe/test/test_tags.py`
+- in `app/recipe/test/test_tags_api.py`
 
   ```Python
     from django.contrib.auth import get_user_model
@@ -2153,7 +2158,7 @@
 - Create the following file
 
   ```Bash
-    touch app/recipe/tests/test_ingredients.py
+    touch app/recipe/tests/test_ingredients_api.py
   ```
 
 #### Ingredient - Models
@@ -2328,7 +2333,7 @@
 
 [Go Back to Contents](#contents)
 
-- in `app/recipe/tests/test_ingredients.py`
+- in `app/recipe/tests/test_ingredients_api.py`
 
   ```Python
     from django.contrib.auth import get_user_model
@@ -2458,6 +2463,16 @@
 
 ### Recipe
 
+#### Recipe - Folder and Files
+
+[Go Back to Contents](#contents)
+
+- Create a new test case
+
+  ```Bash
+    touch app/recipe/tests/test_recipe_api.py
+  ```
+
 #### Recipe - Model
 
 [Go Back to Contents](#contents)
@@ -2524,6 +2539,157 @@
     admin.site.register(models.Recipe)
   ```
 
+#### Recipe - Serializer
+
+[Go Back to Contents](#contents)
+
+- in `app/recipe/serializers.py`
+
+  - Import Recipe model
+  - We are going to create the **RecipeSerializer**
+  - With **Recipe** model we have some **ManyToMany** RelatedFields and we need to get the ids to those references
+  - [https://www.django-rest-framework.org/api-guide/relations/#primarykeyrelatedfield](https://www.django-rest-framework.org/api-guide/relations/#primarykeyrelatedfield)
+
+    ```Python
+      from rest_framework import serializers
+      from core.models import Tag, Ingredient, Recipe
+
+
+      class TagSerializer(serializers.ModelSerializer):
+          """Serializer for tag objects"""
+          class Meta:
+              model = Tag
+              fields = ('id', 'name')
+              read_only_fields = ('id',)
+
+
+      class IngredientSerializer(serializers.ModelSerializer):
+          """Serializer for ingredients objects"""
+          class Meta:
+              model = Ingredient
+              fields = ('id', 'name')
+              read_only_fields = ('id',)
+
+
+      class RecipeSerializer(serializers.ModelSerializer):
+          """Serializer for recipe objects"""
+          # = References - Getting IDs
+          ingredients = serializers.PrimaryKeyRelatedField(
+              many=True, queryset=Ingredient.objects.all()
+          )
+          # https://www.django-rest-framework.org/api-guide/relations/#primarykeyrelatedfield
+          # many equals True, because this is a many to many field
+          #    allow many
+          # queryset to list all ingredients
+          #    this will list only the Ids
+          # to retrive the full object, we will create a detail API for that
+          tags = serializers.PrimaryKeyRelatedField(
+              many=True, queryset=Tag.objects.all()
+          )
+
+          class Meta:
+              model = Recipe
+              fields = ('id', 'title', 'ingredients', 'tags',
+                        'time_minutes', 'price', 'link')
+              read_only_fields = ('id',)
+              # ! Good practice to prevent the user from updating the ID
+    ```
+
+#### Recipe - Views (Controllers)
+
+[Go Back to Contents](#contents)
+
+- in `app/recipe/views.py`
+
+  - Import our **Recipe** model
+  - Crate a new viewset, we are going to inherite from `viewsets.ModelsViewSet` bacuse we need all the functionaties to CRUD this model
+  - then we override the `get_queryset()` to only return objects from the authenticated user
+  - Override the **get_serializer_class** to handle different types of requests
+
+    - Get all recipes
+    - Get one recipe
+      - With this option, the user will received the whole recipe with ManyToMany fields populated with their information
+
+    ```Python
+      from rest_framework import viewsets, mixins
+      from rest_framework.authentication import TokenAuthentication
+      from rest_framework.permissions import IsAuthenticated
+      from core.models import Tag, Ingredient, Recipe
+      from recipe import serializers
+
+
+      class BaseRecipeViewSet(viewsets.GenericViewSet,
+          ...
+
+
+      class TagViewSet(BaseRecipeViewSet):
+          ...
+
+
+      class IngredientViewSet(BaseRecipeViewSet):
+          ...
+
+
+      class RecipeViewSet(viewsets.ModelViewSet):
+      """Manage recipes in the database"""
+      serializer_class = serializers.RecipeSerializer
+      queryset = Recipe.objects.all()
+      authentication_classes = (TokenAuthentication,)
+      permission_classes = (IsAuthenticated,)
+
+      def get_queryset(self):
+          """Retrieve the recipes for the authenticated user"""
+          return self.queryset.filter(user=self.request.user)
+
+      def class RecipeViewSet(viewsets.ModelViewSet):
+    """Manage recipes in the database"""
+    serializer_class = serializers.RecipeSerializer
+    queryset = Recipe.objects.all()
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        """Retrieve the recipes for the authenticated user"""
+        return self.queryset.filter(user=self.request.user)
+
+    def get_serializer_class(self):
+        # + override the get_serializer_class to handle different
+        # + requests (get 1 item or get all items)
+        # + # https://www.django-rest-framework.org/api-guide/generic-views/#get_serializer_classself
+        """Return appropriate serializer class"""
+        if self.action == 'retrieve':
+            # + we user self.action to check the type of the request
+            # + 'retrieve' means 1 recipe
+            return serializers.RecipeDetailSerializer
+        return self.serializer_class(self):
+    ```
+
+#### Recipe - Urls (Router)
+
+[Go Back to Contents](#contents)
+
+- in `app/recipe/urls.py`
+
+  - Register a the `recipes` urls
+
+    ```Python
+      from django.urls import path, include
+      from rest_framework.routers import DefaultRouter
+      from recipe import views
+
+      app_name = 'recipe'
+
+      router = DefaultRouter()
+      router.register('tags', views.TagViewSet)
+      router.register('ingredients', views.IngredientViewSet),
+      router.register('recipes', views.RecipeViewSet),
+
+
+      urlpatterns = [
+          path('', include(router.urls))
+      ]
+    ```
+
 #### Recipe - Test Models
 
 [Go Back to Contents](#contents)
@@ -2543,3 +2709,82 @@
           )
           self.assertEqual(str(recipe), recipe.title)
     ```
+
+#### Recipe - Test
+
+[Go Back to Contents](#contents)
+
+- in `app/recipe/tests/test_recipe_api.py`
+
+  ```Python
+    from django.contrib.auth import get_user_model
+    from django.test import TestCase
+    from django.urls import reverse
+    from rest_framework import status
+    from rest_framework.test import APIClient
+    from core.models import Recipe
+    from recipe.serializers import RecipeSerializer
+
+    RECIPES_URL = reverse('recipe:recipe-list')
+
+
+    def sample_recipe(user, **params):
+        """Create and return a sample recipe"""
+        defaults = {
+            'title': 'Sample recipe',
+            'time_minutes': 10,
+            'price': 5.00
+        }
+        defaults.update(params)
+        # .update() - python function to override object
+        return Recipe.objects.create(user=user, **defaults)
+
+
+    class PublicRecipeApiTests(TestCase):
+        """Test unauthenticated recipe API access"""
+
+        def setUp(self):
+            self.client = APIClient()
+
+        def test_auth_required(self):
+            """Test that authentication is required"""
+            res = self.client.get(RECIPES_URL)
+            self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+    class PrivateRecipeApiTests(TestCase):
+        """Test authenticated recipe API access"""
+
+        def setUp(self):
+            self.client = APIClient()
+            self.user = get_user_model().objects.create_user(
+                'test@test.com',
+                'password123'
+            )
+            self.client.force_authenticate(self.user)
+
+        def test_retrive_recipes(self):
+            """Test retrieving a list of recipes"""
+            sample_recipe(user=self.user)
+            sample_recipe(user=self.user)
+            res = self.client.get(RECIPES_URL)
+            recipes = Recipe.objects.all().order_by('-id')
+            serializer = RecipeSerializer(recipes, many=True)
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(res.data, serializer.data)
+
+        def test_recipes_limited_to_user(self):
+            """Test retrieving recipes for user"""
+            user2 = get_user_model().objects.create_user(
+                'user2@test.com',
+                'password123'
+            )
+            sample_recipe(user=user2)
+            sample_recipe(user=self.user)
+            res = self.client.get(RECIPES_URL)
+            recipes = Recipe.objects.filter(user=self.user)
+            serializer = RecipeSerializer(recipes, many=True)
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(len(res.data), 1)
+            self.assertEqual(res.data, serializer.data)
+  ```
