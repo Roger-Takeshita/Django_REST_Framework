@@ -20,16 +20,9 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 class RecipeSerializer(serializers.ModelSerializer):
     """Serializer for recipe objects"""
-    # = References - Getting IDs
     ingredients = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Ingredient.objects.all()
     )
-    # https://www.django-rest-framework.org/api-guide/relations/#primarykeyrelatedfield
-    # many equals True, because this is a many to many field
-    #    allow many
-    # queryset to list all ingredients
-    #    this will list only the Ids
-    # to retrive the full object, we will create a detail API for that
     tags = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Tag.objects.all()
     )
@@ -41,13 +34,9 @@ class RecipeSerializer(serializers.ModelSerializer):
                   'time_minutes', 'price', 'link'
         )
         read_only_fields = ('id',)
-        # ! Good practice to prevent the user from updating the ID
 
 
 class RecipeDetailSerializer(RecipeSerializer):
-    # + we are using the RecipeSerializer as base, because we are
-    # + going to user most of the fields and we just need to override
-    # + the fields that we need
     """Serializer a recipe detail"""
     ingredients = IngredientSerializer(
         many=True,
@@ -57,3 +46,11 @@ class RecipeDetailSerializer(RecipeSerializer):
         many=True,
         read_only=True
     )
+
+
+class RecipeImageSerializer(serializers.ModelSerializer):
+    """Serializer for uploading images for recipes"""
+    class Meta:
+        model = Recipe
+        fields = ('id', 'image')
+        read_only_fields = ('id',)

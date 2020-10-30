@@ -19,6 +19,7 @@
   - [Core App](#core-app)
     - [Create Folder and Files](#create-folder-and-files)
     - [Settings.py](#settingspy)
+    - [Project Urls](#project-urls)
     - [Model](#model)
       - [BaseUserManager](#baseusermanager)
       - [AbstractBaseUser](#abstractbaseuser)
@@ -79,6 +80,7 @@
       - [Recipe - Urls (Router)](#recipe---urls-router)
       - [Recipe - Test Models](#recipe---test-models)
       - [Recipe - Test](#recipe---test)
+        - [RECIPE - IMAGE UPLOAD TEST](#recipe---image-upload-test)
 
 # FOLDER AND FILES
 
@@ -123,21 +125,27 @@
      ```
 
   4. Install the requirements.txt
+
      ```Python
        # COPY The_project_requirements  and copy into docker_image_requirements
        COPY ./requirements.txt /requirements.txt
      ```
+
   5. Install the requirements.txt into docker image
 
      ```Python
-       RUN apk add --update --no-cache postgresql-client
+       RUN apk add --update --no-cache postgresql-client jpeg-dev
        # apk        = uses the package management tha comes with python 3.9-alpine
        # add        = add a package
        # --update   = update the package
        # --no-cache = don't install/cache the apk registry in our docker file (to minimize the size of packages/files included in our dockerfile)
+       # postgresql-client = dependency to use PostgreSQL
+       # jpeg-dev = adds jpeg binary to our docker file for Pillow (PIL)
        RUN apk add --update --no-cache --virtual .tmp-build-deps \
-           gcc libc-dev linux-headers postgresql-dev
+           gcc libc-dev linux-headers postgresql-dev musl-dev zlib zlib-dev
        # postgreSQL dependencies/requirements, create a temporary virtual folder to install and then remove after the installation
+       # postgresql-dev = build dependency for PostgreSQL
+       # musl-dev zlib zlib-dev = build dependency for Pillow (PIL)
        RUN pip install -r /requirements.txt
        RUN apk del .tmp-build-deps
        # Deletes the temporary virtual folder
@@ -154,17 +162,33 @@
         COPY ./app /app
      ```
 
-  7. Create a user that is going to run our docker application
+  7. Create **media** and **static** folder
+
+  ```Python
+    RUN mkdir -p /vol/web/media
+    RUN mkdir -p /vol/web/static
+  ```
+
+  8. Create a user that is going to run our docker application
 
      - We do that for security purposes, if we don't define that, the image will run the application with the root account
 
      ```Python
        RUN adduser -D dockeruser
-       # adduser         = create a user
-       # -D              = only for running applications
-       # dockeruser      = the name of the user
+       # adduser               = create a user
+       # -D                    = only for running applications
+       # dockeruser            = the name of the user
+       RUN chown -R dockeruser:dockeruser /vol
+       # chown                 = Change the owner of the folder
+       # -R                    = Recursively
+       # dockeruser:dockeruser = To dockeruser
+       RUN chmod -R 755 /vol/web
+       # chmod                 = Change folder mod
+       # -R                    = Recursively
+       # 755                   = Owner can Read/Write
+       # /vol/web              = Folder path
        USER dockeruser
-       # USER dockeruser = Change the user to dockeruser
+       # USER dockeruser       = Change the user to dockeruser
      ```
 
   ```Python
@@ -174,15 +198,23 @@
     ENV PYTHONUNBUFFERED 1
 
     COPY ./requirements.txt /requirements.txt
-    RUN apk add --update --no-cache postgresql-client
+    RUN apk add --update --no-cache postgresql-client jpeg-dev
+    RUN apk add --update --no-cache --virtual .tmp-build-deps \
+        gcc libc-dev linux-headers postgresql-dev musl-dev zlib zlib-dev
     RUN pip install -r /requirements.txt
+    RUN apk del .tmp-build-deps
 
     RUN mkdir /app
     WORKDIR /app
     COPY ./app /app
 
-    RUN adduser -D user
-    USER user
+    RUN mkdir -p /vol/web/media
+    RUN mkdir -p /vol/web/static
+
+    RUN adduser -D dockeruser
+    RUN chown -R user:dockeruser /vol/
+    RUN chmod -R 755 /vol/web
+    USER dockeruser
   ```
 
 ## requirements.txt
@@ -194,11 +226,19 @@
   - We are going to install all packages that we need
   - We can find the package at [https://pypi.org](https://pypi.org)
 
+    - [Pillow - PIL - Upload Images](https://pillow.readthedocs.io/en/stable/index.html)
+      - This library provides extensive file format support, an efficient internal representation, and fairly powerful image processing capabilities.
+    - [psycopg2 - PostgreSQL Adapter](https://pypi.org/project/psycopg2/)
+      - Psycopg is the most popular PostgreSQL database adapter for the Python programming language.
+    - [flake8](https://flake8.pycqa.org/en/latest/)
+      - flake8 is a command-line utility for enforcing style consistency across Python projects. By default it includes lint checks provided by the PyFlakes project, PEP-0008 inspired style checks provided by the PyCodeStyle project, and McCabe complexity checking provided by the McCabe project.
+
     ```Txt
       Django>=3.1.2,<3.2.0
       djangorestframework>=3.12.1,<3.20.0
       flake8>=3.8.4,<3.9.0
       psycopg2>=2.8.6,<2.9.0
+      Pillow>=8.0.1,<8.1.0
     ```
 
 ## Build Docker Image
@@ -505,6 +545,16 @@
       }
     ```
 
+  - Setup the **media** and **static** folder and roots
+
+    ```Python
+      STATIC_URL = '/static/'
+      MEDIA_URL = '/media/'
+
+      MEDIA_ROOT = '/vol/web/media'
+      STATIC_ROOT = '/vol/web/static'
+    ```
+
   - Add the auth model
 
     ```Python
@@ -605,8 +655,35 @@
     USE_TZ = True
 
     STATIC_URL = '/static/'
+    MEDIA_URL = '/media/'
+
+    MEDIA_ROOT = '/vol/web/media'
+    STATIC_ROOT = '/vol/web/static'
 
     AUTH_USER_MODEL = 'core.User'
+  ```
+
+### Project Urls
+
+[Go Back to Contents](#contents)
+
+- in `app/config/urls.py`
+
+  - The following steps are only required if you are going to use Pillow (PIL) and local media storage
+    - import **static** from `django.conf.urls.static`
+    - import **settings** from `django.conf`
+    - in the end of the urlpattern add ` + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)`
+      - To set the path to our images
+
+  ```Python
+    from django.contrib import admin
+    from django.urls import path
+    from django.conf.urls.static import static
+    from django.conf import settings
+
+    urlpatterns = [
+        path('admin/', admin.site.urls),
+    ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
   ```
 
 ### Model
@@ -1273,11 +1350,13 @@
     ```Python
       from django.contrib import admin
       from django.urls import path, include
+      from django.conf.urls.static import static
+      from django.conf import settings
 
       urlpatterns = [
           path('admin/', admin.site.urls),
           path('api/user/', include('user.urls'))
-      ]
+      ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     ```
 
 ### User - Token Authentication
@@ -1830,12 +1909,14 @@
   ```Python
     from django.contrib import admin
     from django.urls import path, include
+    from django.conf.urls.static import static
+    from django.conf import settings
 
     urlpatterns = [
         path('admin/', admin.site.urls),
         path('api/user/', include('user.urls')),
         path('api/recipe/', include('recipe.urls')),
-    ]
+    ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
   ```
 
 ### Tag
@@ -2891,5 +2972,218 @@
             self.assertEqual(recipe.price, payload['price'])
             tags = recipe.tags.all()
             self.assertEqual(len(tags), 0)
+  ```
 
+##### RECIPE - IMAGE UPLOAD TEST
+
+[Go Back to Contents](#contents)
+
+- in `app/core/tests/test_models.py`
+
+  - Let's test the image upload file name
+  - Import **patch** from `unittest.mock`
+    - So we can mock the `uuid` to generate the same id
+
+  ```Python
+    from django.test import TestCase
+    from django.contrib.auth import get_user_model
+    from unittest.mock import patch
+    from core import models
+
+
+    def sample_user():
+        """Create a sample user"""
+        user = {
+            "email": "test@test.com",
+            "password": "test123",
+            "name": "test"
+        }
+        return get_user_model().objects.create(**user)
+
+
+    class ModelTests(TestCase):
+
+        ...
+
+        @patch('uuid.uuid4')
+        # + we are going to patch the uuid4 function that comes from uuid
+        def test_recipe_file_name_uuid(self, mock_uuid):
+            """Test that image is saved in the correct location"""
+            uuid = 'test-uuid'
+            mock_uuid.return_value = uuid
+            file_path = models.recipe_image_file_name_path(None, 'mayimage.jpg')
+            # + we are going to use our custom recipe_image_file_name_path function
+            # + the first argument is the instance, in our case we can pass None
+            # + the second argument is the name of the file
+            expected_path = f'uploads/recipe/{uuid}.jpg'
+            self.assertEqual(file_path, expected_path)
+  ```
+
+- in `app/core/models.py`
+
+  - Import **uuid** and **os**
+    - **uuid** will be responsible for creating an unique id
+    - **os** will be responsible to generate a valid path
+  - Create our helper function `recipe_image_file_name_path`
+  - Add the image field
+
+    ```Python
+      from django.db import models
+      from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, \
+          PermissionsMixin
+      from django.conf import settings
+      import uuid
+      import os
+
+
+      # this helper function will be responsible for converting the original
+      # filename into an unique filename
+      def recipe_image_file_name_path(instance, filename):
+          # the first argument is the instance that is creating the path
+          # filename is the name of the file.extension
+          """Generate file path for new recipe image"""
+          extension = filename.split('.')[-1]
+          filename = f'{uuid.uuid4()}.{extension}'
+          return os.path.join('uploads/recipe/', filename)
+
+
+      ...
+
+      class Recipe(models.Model):
+          """Recipe object"""
+          user = models.ForeignKey(
+              settings.AUTH_USER_MODEL,
+              on_delete=models.CASCADE
+          )
+          title = models.CharField(max_length=255)
+          time_minutes = models.IntegerField()
+          price = models.DecimalField(max_digits=5, decimal_places=2)
+          link = models.CharField(max_length=255, blank=True)
+          ingredients = models.ManyToManyField('Ingredient')
+          tags = models.ManyToManyField('Tag')
+          image = models.ImageField(null=True, upload_to=recipe_image_file_name_path)
+          # + null=True, images are optional
+          # upload_to references our recipe_image_file_name_path function
+          # the upload_to function is called by the ImageField, so everytime django
+          # call this field, it runs the our custom function in the background
+
+          def __str__(self):
+              return self.title
+    ```
+
+- Adding more feature to the upload image file
+
+  - in `app/recipe/tests/test_recipe_api.py`
+    - Import **tempfile**
+      - This is a builtin django module that allow us to generate temporary files
+      - The idea is to create a temp file, use it, and then delete it.
+    - Import **os**
+      - The **os** module will help us to create path names and check if the file exists
+    - Import **Image** from `PIL`
+    - Create a new function to automatically generate the image url
+
+- Update serializer
+
+  - in `app/recipe/serializers.py`
+
+    - Create a new serializer to handle the image upload
+
+      ```Python
+        from rest_framework import serializers
+        from core.models import Tag, Ingredient, Recipe
+
+
+        ...
+
+        class RecipeImageSerializer(serializers.ModelSerializer):
+            """Serializer for uploading images for recipes"""
+            class Meta:
+                model = Recipe
+                fields = ('id', 'name')
+                read_only_fields = ('id',)
+      ```
+
+- View (controllers)
+
+- in `app/recipe/views.py`
+
+  - Import **actions** from `rest_framework.decorators`
+    - The **action** is responsible for creating custom action to your viewset
+  - Import **Response** from `rest_framework.response`
+    - To create custom JSON response
+  - Update our `get_serializer_class` to handle if `self.action` is equal to `upload_image`
+    - If `yes`, use `serializers.RecipeImageSerializer`
+
+  ```Python
+    from rest_framework import viewsets, mixins, status
+    from rest_framework.authentication import TokenAuthentication
+    from rest_framework.permissions import IsAuthenticated
+    from rest_framework.decorators import action
+    # + the action is responsible for creating custom action to your viewset
+    from rest_framework.response import Response
+    # + returns a custom response
+    from core.models import Tag, Ingredient, Recipe
+    from recipe import serializers
+
+
+    class BaseRecipeViewSet(viewsets.GenericViewSet,
+                            mixins.ListModelMixin,
+                            mixins.CreateModelMixin):
+        ...
+
+
+    class TagViewSet(BaseRecipeViewSet):
+        ...
+
+
+    class IngredientViewSet(BaseRecipeViewSet):
+        ...
+
+    class RecipeViewSet(viewsets.ModelViewSet):
+        ...
+
+        def get_queryset(self):
+            ...
+
+        def get_serializer_class(self):
+            """Return appropriate serializer class"""
+            if self.action == 'retrieve':
+                return serializers.RecipeDetailSerializer
+            elif self.action == 'upload_image':
+                return serializers.RecipeImageSerializer
+            return self.serializer_class
+
+        def perform_create(self, serializer):
+            ...
+
+        # + Custom function (custom action)
+        # + we user the action decoration, then we have to define the methods that we want to allow
+        # + detail=True = this means that django only is going to user this action
+        # + for the detail urls, the detail in this case is a specific recipe (id=1)
+        # + We are only going to be able to upload image for recipes that already exists
+        # + url_path = is the path of our url
+        # + localhost:8000/api/recipe/recipes/1/upload-image/
+        @action(methods=['POST'], detail=True, url_path='upload-image')
+        def upload_image(self, request, pk=None):
+            # we need to forward the request and pk
+            """Upload an image to a recipe"""
+            # this will get the get object by the id that is being passed on the url
+            recipe = self.get_object()
+            # then we need to pass the recipe object and the data that we want to serialize
+            serializer = self.get_serializer(
+                recipe, data=request.data
+            )
+            # if the serializer is valid, then save
+            if serializer.is_valid():
+                serializer.save()
+                # + Create our custom response
+                return Response(
+                    serializer.data,
+                    status=status.HTTP_200_OK
+                )
+            # + Create our custom response
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
   ```
