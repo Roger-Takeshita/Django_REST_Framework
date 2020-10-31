@@ -17,9 +17,6 @@ RECIPES_URL = reverse('recipe:recipe-list')
 def detail_url(recipe_id):
     """Return recipe detail url"""
     return reverse('recipe:recipe-detail', args=[recipe_id])
-    # Using the reverse function to generate the url
-    # To access a specific recipe we need to use '-detail'
-    # And add the args = [recipe_id]
 
 
 def image_upload_url(recipe_id):
@@ -45,7 +42,6 @@ def sample_recipe(user, **params):
         'price': 5.00
     }
     defaults.update(params)
-    # .update() - python function to override object
     return Recipe.objects.create(user=user, **defaults)
 
 
@@ -120,11 +116,6 @@ class PrivateRecipeApiTests(TestCase):
         recipe = Recipe.objects.get(id=res.data['id'])
         for key in payload.keys():
             self.assertEqual(payload[key], getattr(recipe, key))
-            # we need to loop through the recipe response to check
-            # if the fields are correct
-            # getattr() is a helper funcion builtin Python to check
-            # if the property exists, if yes return the value
-            # https://docs.python.org/3/library/functions.html#getattr
 
     def test_create_recipe_with_tags(self):
         """Test creating a recipe with tags"""
@@ -233,3 +224,68 @@ class RecipeImageUploadTests(TestCase):
         url = image_upload_url(self.recipe.id)
         res = self.client.post(url, {'image': 'notimage'}, format='multipart')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_filter_recipes_by_tags(self):
+        """Test returning recipes with specific tags"""
+        recipe1 = sample_recipe(
+            user=self.user,
+            title='Thai vegetable curry',
+        )
+        recipe2 = sample_recipe(
+            user=self.user,
+            title='Aubergine with tahini',
+        )
+        tag1 = sample_tag(user=self.user, name='Vegan')
+        tag2 = sample_tag(user=self.user, name='Vegetarian')
+        recipe1.tags.add(tag1)
+        recipe2.tags.add(tag2)
+        recipe3 = sample_recipe(
+            user=self.user,
+            title="Fish and chips"
+        )
+        res = self.client.get(
+            RECIPES_URL,
+            {'tags': f'{tag1.id},{tag2.id}'
+             }
+        )
+        serializer1 = RecipeSerializer(recipe1)
+        serializer2 = RecipeSerializer(recipe2)
+        serializer3 = RecipeSerializer(recipe3)
+        self.assertIn(serializer1.data, res.data)
+        self.assertIn(serializer2.data, res.data)
+        self.assertNotIn(serializer3.data, res.data)
+
+    def test_filter_recipes_by_ingredients(self):
+        """Test returning recipes with specific ingredients"""
+        recipe1 = sample_recipe(
+            user=self.user,
+            title="Posh beans on toast"
+        )
+        recipe2 = sample_recipe(
+            user=self.user,
+            title="Chicken cacciatore"
+        )
+        ingredient1 = sample_ingredient(
+            user=self.user,
+            name="Feta cheese"
+        )
+        ingredient2 = sample_ingredient(
+            user=self.user,
+            name="Chicken"
+        )
+        recipe1.ingredients.add(ingredient1)
+        recipe2.ingredients.add(ingredient2)
+        recipe3 = sample_recipe(
+            user=self.user,
+            title="Steak and mushroom"
+        )
+        res = self.client.get(
+            RECIPES_URL,
+            {'ingredients': f'{ingredient1.id},{ingredient2.id}'}
+        )
+        serializer1 = RecipeSerializer(recipe1)
+        serializer2 = RecipeSerializer(recipe2)
+        serializer3 = RecipeSerializer(recipe3)
+        self.assertIn(serializer1.data, res.data)
+        self.assertIn(serializer2.data, res.data)
+        self.assertNotIn(serializer3.data, res.data)

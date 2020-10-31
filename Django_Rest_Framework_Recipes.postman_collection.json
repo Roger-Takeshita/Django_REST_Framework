@@ -1,0 +1,965 @@
+{
+	"info": {
+		"_postman_id": "a2d568b3-e625-4548-b26e-dcc3dae624e6",
+		"name": "Django Rest Framework Recipes",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "User - Login",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "b939668a-0ddd-4481-b8d3-5fe719f05788",
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    pm.environment.set('Token', pm.response.json().token)",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"roger_postman@test.com\",\n    \"password\": \"test123\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/user/token/",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"user",
+						"token",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "User - Sign Up",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "0462cc2c-568b-45f0-9a66-64840990d086",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Roger Postman\",\n    \"email\": \"roger_postman@test.com\",\n    \"password\": \"test123\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/user/create/",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"user",
+						"create",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "User - Profile",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "ecd230df-5346-405c-a891-23bd3d12823f",
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    pm.environment.set('Token', pm.response.json().token)",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/user/me/",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"user",
+						"me",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "User - Update Profile",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "712ee127-e88f-4ef3-9fb9-6f7765252fbb",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Roger Postman Update\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/user/me/",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"user",
+						"me",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Ingredients",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "17b6ca41-ba13-435a-ab51-63d71e51bb17",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/recipe/ingredients/",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"recipe",
+						"ingredients",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Ingredients - Create",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "56bb0932-1f58-4b3f-b411-9024e2989b0f",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Banana\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/recipe/ingredients/",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"recipe",
+						"ingredients",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Ingredients - Filter Assigned Only",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "6da9a55d-dcb0-4b27-8435-2492e5f1a61f",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/recipe/ingredients/?assigned_only=1",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"recipe",
+						"ingredients",
+						""
+					],
+					"query": [
+						{
+							"key": "assigned_only",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Tags",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "951cb307-f13a-46a5-bd00-6387ab72978b",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/recipe/tags/",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"recipe",
+						"tags",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Tags - Create",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "c91949be-51f9-4ec6-a943-bae2f207e79e",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Snack\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/recipe/tags/",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"recipe",
+						"tags",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Tags - Filter Assigned Only",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "66a1138e-6f75-4fe4-81c1-195979c6033c",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/recipe/tags/?assigned_only=1",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"recipe",
+						"tags",
+						""
+					],
+					"query": [
+						{
+							"key": "assigned_only",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Recipes",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "78fbb234-e641-4db3-b61e-d327b08c5b2b",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/recipe/recipes/",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"recipe",
+						"recipes",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Recipes - Create Recipe",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "dc8e5e67-e2e2-4bb8-95bc-79448e85ca1d",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"title\": \"Vegan key lime pie\",\n    \"tags\": [2],\n    \"ingredients\": [3],\n    \"time_minutes\": 60,\n    \"price\": 15.00\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/recipe/recipes/",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"recipe",
+						"recipes",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Recipes - Image Upload",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "9712bcba-16c3-4ebb-b4c8-c0cdb387f418",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "image",
+							"type": "file",
+							"src": "/Users/roger-that/Desktop/Screen Shot 2020-10-30 at 12.10.18 PM.png"
+						}
+					],
+					"options": {
+						"formdata": {}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/recipe/recipes/1/upload-image/",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"recipe",
+						"recipes",
+						"1",
+						"upload-image",
+						""
+					],
+					"query": [
+						{
+							"key": "",
+							"value": null,
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Recipes - One Recipe",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "fc2cade0-8b09-4881-a095-8b1a40348f87",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/recipe/recipes/1/",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"recipe",
+						"recipes",
+						"1",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Recipes - Filter by Tag",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "d2505cf9-c2cf-40d1-bdb8-75d725cabb40",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/recipe/recipes/1/?tags=2",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"recipe",
+						"recipes",
+						"1",
+						""
+					],
+					"query": [
+						{
+							"key": "tags",
+							"value": "2"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Recipes - Filter by Ingredients",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "7e104b62-3e1f-4835-b858-fe21caa1a1d6",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/recipe/recipes/1/?ingredients=3",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"recipe",
+						"recipes",
+						"1",
+						""
+					],
+					"query": [
+						{
+							"key": "ingredients",
+							"value": "3"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Recipes - Filter by Ingredients and Tags",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "486db746-fc00-4dff-90d8-a8d0fbefbe4b",
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Token {{Token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/api/recipe/recipes/1/?ingredients=3&tags=2",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"api",
+						"recipe",
+						"recipes",
+						"1",
+						""
+					],
+					"query": [
+						{
+							"key": "ingredients",
+							"value": "3"
+						},
+						{
+							"key": "tags",
+							"value": "2"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{Token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"id": "f8aa7343-bddb-47ac-9e9a-8ff7908d4b26",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"id": "abdc30be-99de-43a1-92c3-8de5215472f9",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"protocolProfileBehavior": {}
+}
