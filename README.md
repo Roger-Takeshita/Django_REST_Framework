@@ -409,6 +409,22 @@
     touch .travis.yml app/.flake8
   ```
 
+- in `.travis.yml`
+
+  ```yml
+  language: python
+  python:
+    - "3.6"
+
+  services:
+    - docker
+
+  before_scripts: pip install docker-compose
+
+  scripts:
+    - docker-compose run app sh -c "python manage.py test && flake8"
+  ```
+
 ### Flake8
 
 [Go Back to Contents](#contents)
